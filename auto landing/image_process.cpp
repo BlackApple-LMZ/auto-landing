@@ -282,9 +282,9 @@ void imageProcess::loadImage() {
 //	cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 
 	cv::Point crosspoint(0, 0);
-	//if (findCrosspoint(left_line, right_line, raw_image_.rows, raw_image_.cols, crosspoint)) {
+	if (findCrosspoint(left_line, right_line, raw_image_.rows, raw_image_.cols, crosspoint)) {
 		//circle(raw_image_, crosspoint, 5, cv::Scalar(0, 255, 0), -1);
-	//}
+	}
 	
 	cv::Mat image_mask_result(raw_image_.size(), CV_8UC3, cv::Scalar(0, 0, 0)); //最终的交集mask
 	maskFusion(left_line, right_line, crosspoint, image_mask_contour, image_mask_result);
