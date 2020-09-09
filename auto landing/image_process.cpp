@@ -190,30 +190,34 @@ bool imageProcess::findCrosspoint(cv::Vec4i left_line, cv::Vec4i right_line, int
 
 	return true;
 }
-void imageProcess::maskFusion(cv::Vec4i left_line, cv::Vec4i right_line, cv::Point crosspoint, const cv::Mat &image_mask_contour, cv::Mat &image_mask_result) {
+void imageProcess::maskFusion(cv::Vec4i left_line, cv::Vec4i right_line, const cv::Mat &image_mask_contour, cv::Mat &image_mask_result) {
 	cv::Mat image_poly(image_mask_contour.size(), CV_8UC3, cv::Scalar(0, 0, 0));
 	
 	//if there is no crosspoint between left line and right line
-	if (crosspoint.x <= 0 && crosspoint.y) {
+	int npt[1] = { 4 };
+	cv::Point root_points[1][4];
+	root_points[0][0] = cv::Point(left_line[0], left_line[1]);
+	root_points[0][1] = cv::Point(left_line[2], left_line[3]);
+	root_points[0][2] = cv::Point(right_line[2], right_line[3]);
+	root_points[0][3] = cv::Point(right_line[0], right_line[1]);
+	const cv::Point* ppt[1] = { root_points[0] };
+	fillPoly(image_poly, ppt, npt, 1, cv::Scalar(0, 255, 0));
+
+	cv::bitwise_and(image_mask_contour, image_poly, image_mask_result);
+
+	cv::Mat image_poly2(image_mask_contour.size(), CV_8UC3, cv::Scalar(0, 0, 0));
+	//check the cross of the line and the bound
+	if (left_line[0] <= 0 || right_line[0] >= image_mask_contour.cols - 1) {
 		int npt[1] = { 4 };
 		cv::Point root_points[1][4];
 		root_points[0][0] = cv::Point(left_line[0], left_line[1]);
-		root_points[0][1] = cv::Point(left_line[2], left_line[3]);
-		root_points[0][2] = cv::Point(right_line[2], right_line[3]);
+		root_points[0][1] = cv::Point(0, image_mask_contour.rows);
+		root_points[0][2] = cv::Point(image_mask_contour.cols, image_mask_contour.rows);
 		root_points[0][3] = cv::Point(right_line[0], right_line[1]);
 		const cv::Point* ppt[1] = { root_points[0] };
-		fillPoly(image_poly, ppt, npt, 1, cv::Scalar(0, 255, 0));
+		fillPoly(image_poly2, ppt, npt, 1, cv::Scalar(0, 255, 0));
 	}
-	else {
-		int npt[1] = { 3 };
-		cv::Point root_points[1][3];
-		root_points[0][0] = cv::Point(left_line[0], left_line[1]);
-		root_points[0][1] = crosspoint;
-		root_points[0][2] = cv::Point(right_line[0], right_line[1]);
-		const cv::Point* ppt[1] = { root_points[0] };
-		fillPoly(image_poly, ppt, npt, 1, cv::Scalar(0, 255, 0));
-	}
-	cv::bitwise_and(image_mask_contour, image_poly, image_mask_result);
+	cv::bitwise_or(image_mask_result, image_poly2, image_mask_result);
 
 	return;
 }
@@ -280,14 +284,9 @@ void imageProcess::loadImage() {
 
 //	cv::line(raw_image_, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 //	cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
-
-	cv::Point crosspoint(0, 0);
-	//if (findCrosspoint(left_line, right_line, raw_image_.rows, raw_image_.cols, crosspoint)) {
-		//circle(raw_image_, crosspoint, 5, cv::Scalar(0, 255, 0), -1);
-	//}
 	
 	cv::Mat image_mask_result(raw_image_.size(), CV_8UC3, cv::Scalar(0, 0, 0)); //最终的交集mask
-	maskFusion(left_line, right_line, crosspoint, image_mask_contour, image_mask_result);
+	maskFusion(left_line, right_line, image_mask_contour, image_mask_result);
 
 	cv::Mat image_show;
 	addWeighted(raw_image_, 0.75, image_mask_result, 0.25, 0.0, image_show);
@@ -305,7 +304,7 @@ void imageProcess::loadImage() {
 //	cv::imshow("mask image", image_mask);
 	
 	std::cout << t1.toc() << std::endl;
-	cv::waitKey(1);
+	cv::waitKey(0);
 }
 void imageProcess::selectHSVParam() {
 	cv::Mat image = cv::imread(file_name_ + "200.png");
