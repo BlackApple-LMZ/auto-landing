@@ -79,13 +79,19 @@ imageProcess::~imageProcess()
 
 }
 
-void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, double slope_thresh) {
+void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, const cv::Mat& mask, double slope_thresh) {
 
 	std::vector<double> slopes;
 	// Calculate the slope of all the detected lines
 	for (int i = 0; i<lines.size(); i++) {
 		cv::Point ini = cv::Point(lines[i][0], lines[i][1]);
 		cv::Point fini = cv::Point(lines[i][2], lines[i][3]);
+
+		//check the line whether in the mask(the last road area) mask is in bgr with 0 255 0 for true
+		std::cout << lines[i][0] << " " << lines[i][1] << " " << lines[i][2] << " " << lines[i][3] << std::endl;
+		//if (mask.at<uchar>(lines[i][0], lines[i][1]) == 0 || mask.at<uchar>(lines[i][2], lines[i][3]) == 0) {
+			//continue;
+		//}
 
 		// Basic algebra: slope = (y1 - y0)/(x1 - x0)
 		// 这里顺时针为正，与习惯相反，因为图像y轴是向下的 (-180， 180]
@@ -196,7 +202,7 @@ bool imageProcess::checkLine(cv::Vec4i line) {
 	return (line[0] || line[1]) || (line[2] || line[3]);
 }
 void imageProcess::maskFusion(cv::Vec4i left_line, cv::Vec4i right_line, const cv::Mat &image_mask_contour, cv::Mat &image_mask_result) {
-	cv::Mat image_poly(image_mask_contour.size(), CV_8UC3, cv::Scalar(0, 0, 0));
+	cv::Mat image_poly(image_mask_contour.size(), CV_8UC1, cv::Scalar(0));
 	
 	//if detect the left and the right line
 	if (checkLine(left_line) && checkLine(right_line)) {
@@ -208,11 +214,11 @@ void imageProcess::maskFusion(cv::Vec4i left_line, cv::Vec4i right_line, const c
 		root_points[0][2] = cv::Point(right_line[2], right_line[3]);
 		root_points[0][3] = cv::Point(right_line[0], right_line[1]);
 		const cv::Point* ppt[1] = { root_points[0] };
-		fillPoly(image_poly, ppt, npt, 1, cv::Scalar(0, 255, 0));
+		fillPoly(image_poly, ppt, npt, 1, cv::Scalar(255));
 
 		cv::bitwise_and(image_mask_contour, image_poly, image_mask_result);
 
-		cv::Mat image_poly2(image_mask_contour.size(), CV_8UC3, cv::Scalar(0, 0, 0));
+		cv::Mat image_poly2(image_mask_contour.size(), CV_8UC1, cv::Scalar(0));
 		//check the cross of the line and the bound  Fill in the bottom
 		if (left_line[0] <= 0 || right_line[0] >= image_mask_contour.cols - 1) {
 			int npt[1] = { 4 };
@@ -222,7 +228,7 @@ void imageProcess::maskFusion(cv::Vec4i left_line, cv::Vec4i right_line, const c
 			root_points[0][2] = cv::Point(image_mask_contour.cols, image_mask_contour.rows);
 			root_points[0][3] = cv::Point(right_line[0], right_line[1]);
 			const cv::Point* ppt[1] = { root_points[0] };
-			fillPoly(image_poly2, ppt, npt, 1, cv::Scalar(0, 255, 0));
+			fillPoly(image_poly2, ppt, npt, 1, cv::Scalar(255));
 		}
 		cv::bitwise_or(image_mask_result, image_poly2, image_mask_result);
 	}
@@ -231,10 +237,22 @@ void imageProcess::maskFusion(cv::Vec4i left_line, cv::Vec4i right_line, const c
 
 	return;
 }
+void imageProcess::gray2bgr(cv::Mat gray, cv::Mat& bgr) {
+	int channels = bgr.channels();
+	for (int i = 0; i < gray.rows; i++) {
+		uchar *pSrcData = gray.ptr<uchar>(i);
+		uchar *pResuiltData = bgr.ptr<uchar>(i);
+		for (int j = 0, index = 1; j < gray.cols; j++, index += channels) {
+			pResuiltData[index] = pSrcData[j];
+		}
+	}
+}
 void imageProcess::loadImage() {
 	
 	TicToc t1;
 	raw_image_ = cv::imread(file_name_ + std::to_string(curr_index_) + ".png");
+	image_road_result_ = cv::Mat(raw_image_.size(), CV_8UC1, cv::Scalar(0)); //最终的交集mask
+
 //	std::cout << t1.toc() << std::endl;
 
 	TicToc t11;
@@ -254,14 +272,17 @@ void imageProcess::loadImage() {
 	cv::Mat image_inRange;
 	inRange(image_hsv, cv::Scalar(23, 0, 0), cv::Scalar(180, 255, 255), image_inRange);
 	cv::bitwise_not(image_inRange, image_inRange);
-//	cv::imshow("in range image", image_inRange);
+	cv::imshow("in range image", image_inRange);
 //	std::cout << t2.toc() << std::endl;
-
+	
+	cv::Mat image_dilate;
+	cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+	morphologyEx(image_inRange, image_dilate, cv::MORPH_CLOSE, element);
 	//erode(srcImage, outImage, image);   //腐蚀：减少高亮部分
 	//imshow("腐蚀效果图", outImage);
 	
 	std::vector<std::vector<cv::Point>> contours;     
-	findContours(image_inRange, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+	findContours(image_dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
 	int imax = 0; //find contour with max length
 	float imaxLength = 0.0;
@@ -276,49 +297,52 @@ void imageProcess::loadImage() {
 		}
 	}
 
-	cv::Mat image_mask_contour(raw_image_.size(), CV_8UC3, cv::Scalar(0, 0, 0)), image_mask_line(raw_image_.size(), CV_8UC1, cv::Scalar(0));
-	drawContours(image_mask_contour, contours, imax, cv::Scalar(0, 255, 0), CV_FILLED); //for fusion todo 这个是不是可以用inrange那个图来代替
+	cv::Mat image_mask_contour(raw_image_.size(), CV_8UC1, cv::Scalar(0)), image_mask_line(raw_image_.size(), CV_8UC1, cv::Scalar(0));
+	drawContours(image_mask_contour, contours, imax, cv::Scalar(255), CV_FILLED); //for fusion todo 这个是不是可以用inrange那个图来代替
 	drawContours(image_mask_line, contours, imax, cv::Scalar(255), 1);
 //	drawContours(raw_image_, contours, imax, cv::Scalar(0, 0, 255), 3);
+	cv::imshow("line image", image_mask_line);
 
 	std::vector<cv::Vec4i> lines, left_lines, right_lines;
-	cv::HoughLinesP(image_mask_line, lines, 1, CV_PI / 180, 76, 90, 30);
+	cv::HoughLinesP(image_mask_line, lines, 1, CV_PI / 180, 80, 100, 10);
 
-	lineSeparation(lines, left_lines, right_lines, 0.1);
+	lineSeparation(lines, left_lines, right_lines, image_road_result_, 0.1);
 
 	//from bottom to top
 	cv::Vec4i left_line, right_line;
 	regression(left_lines, raw_image_.rows, raw_image_.cols, left_line);
 	regression(right_lines, raw_image_.rows, raw_image_.cols, right_line);
 
-//	cv::line(raw_image_, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-//	cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
+	//cv::line(raw_image_, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+	//cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
 	
-	cv::Mat image_mask_result(raw_image_.size(), CV_8UC3, cv::Scalar(0, 0, 0)); //最终的交集mask
-	maskFusion(left_line, right_line, image_mask_contour, image_mask_result);
+	maskFusion(left_line, right_line, image_inRange, image_road_result_);
 
-	cv::Mat image_show;
-	addWeighted(raw_image_, 0.75, image_mask_result, 0.25, 0.0, image_show);
+	cv::Mat image_show(raw_image_.size(), CV_8UC3, cv::Scalar(0, 0, 0));
+	gray2bgr(image_road_result_, image_show);
+
+	addWeighted(raw_image_, 0.75, image_show, 0.25, 0.0, image_show);
 	cv::imshow("final image", image_show);
 	cv::imwrite(file_name_ + "record/" + std::to_string(curr_index_++) + ".png", image_show);
+
 //	std::vector<cv::Point> approx;
 //	cv::approxPolyDP(cv::Mat(contours[imax]), approx, 10, true);      //多边形拟合
 	
-	/*for (int i = 0; i < lines.size(); ++i) {
+	for (int i = 0; i < lines.size(); ++i) {
 		cv::Vec4i l = lines[i];
 		cv::line(raw_image_, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-	}*/
+	}
 
 //	const cv::Point* p = &approx[0];
 //	int m = (int)approx.size();
 //	std::cout << "length: " << m << std::endl;
 //	polylines(raw_image_, &p, &m, 1, true, cv::Scalar(0, 0, 255), 3);
 
-//	cv::imshow("raw image", raw_image_);
+	cv::imshow("raw image", raw_image_);
 //	cv::imshow("mask image", image_mask);
 	
 	std::cout << t1.toc() << std::endl;
-	cv::waitKey(1);
+	cv::waitKey(0);
 }
 void imageProcess::selectHSVParam() {
 	cv::Mat image = cv::imread(file_name_ + "200.png");
