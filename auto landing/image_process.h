@@ -25,12 +25,13 @@ namespace autolanding_lmz {
 		 */
 		void selectHSVParam();
 		
+		bool checkLine(cv::Vec4i line);
 		void maskFusion(cv::Vec4i left_line, cv::Vec4i right_line, const cv::Mat &image_mask_contour, cv::Mat &image_mask_result);
 		bool findCrosspoint(cv::Vec4i left_line, cv::Vec4i right_line, int rows, int cols, cv::Point &crosspoint);
 		void regression(std::vector<cv::Vec4i> lines, int rows, int cols, cv::Vec4i &fit_line);
 		void lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, double slope_thresh);
 		std::string file_name_;
-		int curr_index_ = 666;
+		int curr_index_ = 731;
 
 		cv::Mat raw_image_;
     };

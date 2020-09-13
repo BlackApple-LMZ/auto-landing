@@ -129,38 +129,39 @@ void imageProcess::regression(std::vector<cv::Vec4i> lines, int rows, int cols, 
 		cv::fitLine(line_pts, line, CV_DIST_L2, 0, 0.01, 0.01);
 		m = line[1] / line[0];
 		b = cv::Point(line[2], line[3]);
-	}
-	//std::cout << line_pts.size() << std::endl;
-	// One the slope and offset points have been obtained, apply the line equation to obtain the line points
-	int ini_y = rows;
-	int fin_y = 0;
+		//std::cout << m << std::endl;
+	
+		//std::cout << line_pts.size() << std::endl;
+		// One the slope and offset points have been obtained, apply the line equation to obtain the line points
+		int ini_y = rows;
+		int fin_y = 0;
 
-	//check if the start point or the end point is beyond the edge
-	double ini_x = ((ini_y - b.y) / m) + b.x;
-	if (ini_x < 0) {
-		ini_x = 0;
-		ini_y = ((ini_x - b.x) * m) + b.y;
-	}
-	else if (ini_x >= cols) {
-		ini_x = cols;
-		ini_y = ((ini_x - b.x) * m) + b.y;
-	}
+		//check if the start point or the end point is beyond the edge
+		double ini_x = ((ini_y - b.y) / m) + b.x;
+		if (ini_x < 0) {
+			ini_x = 0;
+			ini_y = ((ini_x - b.x) * m) + b.y;
+		}
+		else if (ini_x >= cols) {
+			ini_x = cols;
+			ini_y = ((ini_x - b.x) * m) + b.y;
+		}
 
-	double fin_x = ((fin_y - b.y) / m) + b.x;
-	if (fin_x < 0) {
-		fin_x = 0;
-		fin_y = ((fin_x - b.x) * m) + b.y;
-	}
-	else if (fin_x >= cols) {
-		fin_x = cols;
-		fin_y = ((fin_x - b.x) * m) + b.y;
-	}
+		double fin_x = ((fin_y - b.y) / m) + b.x;
+		if (fin_x < 0) {
+			fin_x = 0;
+			fin_y = ((fin_x - b.x) * m) + b.y;
+		}
+		else if (fin_x >= cols) {
+			fin_x = cols;
+			fin_y = ((fin_x - b.x) * m) + b.y;
+		}
 
-	fit_line[0] = ini_x;
-	fit_line[1] = ini_y;
-	fit_line[2] = fin_x;
-	fit_line[3] = fin_y;
-
+		fit_line[0] = ini_x;
+		fit_line[1] = ini_y;
+		fit_line[2] = fin_x;
+		fit_line[3] = fin_y;
+	}
 	return;
 }
 bool imageProcess::findCrosspoint(cv::Vec4i left_line, cv::Vec4i right_line, int rows, int cols, cv::Point &crosspoint) {
@@ -190,43 +191,51 @@ bool imageProcess::findCrosspoint(cv::Vec4i left_line, cv::Vec4i right_line, int
 
 	return true;
 }
+bool imageProcess::checkLine(cv::Vec4i line) {
+	// line detect fail if all the point is zero
+	return (line[0] || line[1]) || (line[2] || line[3]);
+}
 void imageProcess::maskFusion(cv::Vec4i left_line, cv::Vec4i right_line, const cv::Mat &image_mask_contour, cv::Mat &image_mask_result) {
 	cv::Mat image_poly(image_mask_contour.size(), CV_8UC3, cv::Scalar(0, 0, 0));
 	
-	//if there is no crosspoint between left line and right line
-	int npt[1] = { 4 };
-	cv::Point root_points[1][4];
-	root_points[0][0] = cv::Point(left_line[0], left_line[1]);
-	root_points[0][1] = cv::Point(left_line[2], left_line[3]);
-	root_points[0][2] = cv::Point(right_line[2], right_line[3]);
-	root_points[0][3] = cv::Point(right_line[0], right_line[1]);
-	const cv::Point* ppt[1] = { root_points[0] };
-	fillPoly(image_poly, ppt, npt, 1, cv::Scalar(0, 255, 0));
-
-	cv::bitwise_and(image_mask_contour, image_poly, image_mask_result);
-
-	cv::Mat image_poly2(image_mask_contour.size(), CV_8UC3, cv::Scalar(0, 0, 0));
-	//check the cross of the line and the bound
-	if (left_line[0] <= 0 || right_line[0] >= image_mask_contour.cols - 1) {
+	//if detect the left and the right line
+	if (checkLine(left_line) && checkLine(right_line)) {
+		//if there is no crosspoint between left line and right line
 		int npt[1] = { 4 };
 		cv::Point root_points[1][4];
 		root_points[0][0] = cv::Point(left_line[0], left_line[1]);
-		root_points[0][1] = cv::Point(0, image_mask_contour.rows);
-		root_points[0][2] = cv::Point(image_mask_contour.cols, image_mask_contour.rows);
+		root_points[0][1] = cv::Point(left_line[2], left_line[3]);
+		root_points[0][2] = cv::Point(right_line[2], right_line[3]);
 		root_points[0][3] = cv::Point(right_line[0], right_line[1]);
 		const cv::Point* ppt[1] = { root_points[0] };
-		fillPoly(image_poly2, ppt, npt, 1, cv::Scalar(0, 255, 0));
+		fillPoly(image_poly, ppt, npt, 1, cv::Scalar(0, 255, 0));
+
+		cv::bitwise_and(image_mask_contour, image_poly, image_mask_result);
+
+		cv::Mat image_poly2(image_mask_contour.size(), CV_8UC3, cv::Scalar(0, 0, 0));
+		//check the cross of the line and the bound  Fill in the bottom
+		if (left_line[0] <= 0 || right_line[0] >= image_mask_contour.cols - 1) {
+			int npt[1] = { 4 };
+			cv::Point root_points[1][4];
+			root_points[0][0] = cv::Point(left_line[0], left_line[1]);
+			root_points[0][1] = cv::Point(0, image_mask_contour.rows);
+			root_points[0][2] = cv::Point(image_mask_contour.cols, image_mask_contour.rows);
+			root_points[0][3] = cv::Point(right_line[0], right_line[1]);
+			const cv::Point* ppt[1] = { root_points[0] };
+			fillPoly(image_poly2, ppt, npt, 1, cv::Scalar(0, 255, 0));
+		}
+		cv::bitwise_or(image_mask_result, image_poly2, image_mask_result);
 	}
-	cv::bitwise_or(image_mask_result, image_poly2, image_mask_result);
+	else
+		image_mask_result = image_mask_contour.clone();
 
 	return;
 }
 void imageProcess::loadImage() {
 	
 	TicToc t1;
-	raw_image_ = cv::imread(file_name_ + std::to_string(curr_index_++) + ".png");
+	raw_image_ = cv::imread(file_name_ + std::to_string(curr_index_) + ".png");
 //	std::cout << t1.toc() << std::endl;
-	cv::imwrite(file_name_+"record/raw_image.png", raw_image_);
 
 	TicToc t11;
 	cv::Mat image_gauss;
@@ -237,7 +246,6 @@ void imageProcess::loadImage() {
 	cv::Mat image_hsv;
 	cvtColor(image_gauss, image_hsv, cv::COLOR_BGR2HSV); 
 //	std::cout << t111.toc() << std::endl;
-	cv::imwrite(file_name_ + "record/hsv_image.png", image_hsv);
 //	cv::imshow("gauss image", image_gauss);
 //	cv::imshow("hsv image", image_hsv);
 //	std::cout << t1.toc() << std::endl;
@@ -246,7 +254,6 @@ void imageProcess::loadImage() {
 	cv::Mat image_inRange;
 	inRange(image_hsv, cv::Scalar(23, 0, 0), cv::Scalar(180, 255, 255), image_inRange);
 	cv::bitwise_not(image_inRange, image_inRange);
-	cv::imwrite(file_name_ + "record/inrange_image.png", image_inRange);
 //	cv::imshow("in range image", image_inRange);
 //	std::cout << t2.toc() << std::endl;
 
@@ -273,8 +280,6 @@ void imageProcess::loadImage() {
 	drawContours(image_mask_contour, contours, imax, cv::Scalar(0, 255, 0), CV_FILLED); //for fusion todo 这个是不是可以用inrange那个图来代替
 	drawContours(image_mask_line, contours, imax, cv::Scalar(255), 1);
 //	drawContours(raw_image_, contours, imax, cv::Scalar(0, 0, 255), 3);
-	cv::imwrite(file_name_ + "record/contour_image.png", image_mask_line);
-
 
 	std::vector<cv::Vec4i> lines, left_lines, right_lines;
 	cv::HoughLinesP(image_mask_line, lines, 1, CV_PI / 180, 76, 90, 30);
@@ -289,22 +294,21 @@ void imageProcess::loadImage() {
 //	cv::line(raw_image_, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
 //	cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
 	
-
 	cv::Mat image_mask_result(raw_image_.size(), CV_8UC3, cv::Scalar(0, 0, 0)); //最终的交集mask
 	maskFusion(left_line, right_line, image_mask_contour, image_mask_result);
 
 	cv::Mat image_show;
 	addWeighted(raw_image_, 0.75, image_mask_result, 0.25, 0.0, image_show);
 	cv::imshow("final image", image_show);
-	cv::imwrite(file_name_ + "record/result_image.png", image_show);
+	cv::imwrite(file_name_ + "record/" + std::to_string(curr_index_++) + ".png", image_show);
 //	std::vector<cv::Point> approx;
 //	cv::approxPolyDP(cv::Mat(contours[imax]), approx, 10, true);      //多边形拟合
 	
-	for (int i = 0; i < lines.size(); ++i) {
+	/*for (int i = 0; i < lines.size(); ++i) {
 		cv::Vec4i l = lines[i];
 		cv::line(raw_image_, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-	}
-	cv::imwrite(file_name_ + "record/line_image.png", raw_image_);
+	}*/
+
 //	const cv::Point* p = &approx[0];
 //	int m = (int)approx.size();
 //	std::cout << "length: " << m << std::endl;
@@ -314,7 +318,7 @@ void imageProcess::loadImage() {
 //	cv::imshow("mask image", image_mask);
 	
 	std::cout << t1.toc() << std::endl;
-	cv::waitKey(0);
+	cv::waitKey(1);
 }
 void imageProcess::selectHSVParam() {
 	cv::Mat image = cv::imread(file_name_ + "200.png");
