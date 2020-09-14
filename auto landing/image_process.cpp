@@ -72,14 +72,17 @@ void setTrackBar()
 
 imageProcess::imageProcess(std::string file_name): file_name_(file_name)
 {
-	;
+	raw_image_ = cv::imread(file_name_ + std::to_string(curr_index_) + ".png");
+	image_road_result_ = cv::Mat(raw_image_.size(), CV_8UC1, cv::Scalar(0)); //最终的交集mask
+
+	curr_index_ = start_index_;
 }
 imageProcess::~imageProcess()
 {
 
 }
 
-void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, const cv::Mat& mask, double slope_thresh) {
+void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, const cv::Mat& mask, double slope_thresh, bool bfirst) {
 
 	std::vector<double> slopes;
 	// Calculate the slope of all the detected lines
@@ -87,11 +90,23 @@ void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::
 		cv::Point ini = cv::Point(lines[i][0], lines[i][1]);
 		cv::Point fini = cv::Point(lines[i][2], lines[i][3]);
 
-		//check the line whether in the mask(the last road area) mask is in bgr with 0 255 0 for true
-		std::cout << lines[i][0] << " " << lines[i][1] << " " << lines[i][2] << " " << lines[i][3] << std::endl;
-		//if (mask.at<uchar>(lines[i][0], lines[i][1]) == 0 || mask.at<uchar>(lines[i][2], lines[i][3]) == 0) {
-			//continue;
-		//}
+		//ignore the first frame
+		if (!bfirst) {
+			cv::Mat image_temp = ~mask;
+			cv::Mat imageThin(mask.size(), CV_32FC1); //定义保存距离变换结果的Mat矩阵
+			distanceTransform(image_temp, imageThin, CV_DIST_L2, 3);  //
+
+			//check the line whether in the mask(the last road area) mask is in bgr with 0 255 0 for true
+
+			/*std::cout << imageThin.at<float>(lines[i][1], lines[i][0]) << " " << imageThin.at<float>(lines[i][3], lines[i][2]) << std::endl;
+			cv::line(raw_image_, ini, fini, cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
+			cv::imshow("sssss", raw_image_);
+			cv::waitKey(0);*/
+			//todo 15这个阈值可能需要再调一下
+			if (imageThin.at<float>(lines[i][1], lines[i][0]) > 15 || imageThin.at<float>(lines[i][3], lines[i][2]) > 15) {
+				continue;
+			}
+		}
 
 		// Basic algebra: slope = (y1 - y0)/(x1 - x0)
 		// 这里顺时针为正，与习惯相反，因为图像y轴是向下的 (-180， 180]
@@ -251,8 +266,7 @@ void imageProcess::loadImage() {
 	
 	TicToc t1;
 	raw_image_ = cv::imread(file_name_ + std::to_string(curr_index_) + ".png");
-	image_road_result_ = cv::Mat(raw_image_.size(), CV_8UC1, cv::Scalar(0)); //最终的交集mask
-
+	
 //	std::cout << t1.toc() << std::endl;
 
 	TicToc t11;
@@ -272,7 +286,7 @@ void imageProcess::loadImage() {
 	cv::Mat image_inRange;
 	inRange(image_hsv, cv::Scalar(23, 0, 0), cv::Scalar(180, 255, 255), image_inRange);
 	cv::bitwise_not(image_inRange, image_inRange);
-	cv::imshow("in range image", image_inRange);
+	//cv::imshow("in range image", image_inRange);
 //	std::cout << t2.toc() << std::endl;
 	
 	cv::Mat image_dilate;
@@ -301,21 +315,18 @@ void imageProcess::loadImage() {
 	drawContours(image_mask_contour, contours, imax, cv::Scalar(255), CV_FILLED); //for fusion todo 这个是不是可以用inrange那个图来代替
 	drawContours(image_mask_line, contours, imax, cv::Scalar(255), 1);
 //	drawContours(raw_image_, contours, imax, cv::Scalar(0, 0, 255), 3);
-	cv::imshow("line image", image_mask_line);
+	//cv::imshow("line image", image_mask_line);
 
 	std::vector<cv::Vec4i> lines, left_lines, right_lines;
 	cv::HoughLinesP(image_mask_line, lines, 1, CV_PI / 180, 80, 100, 10);
 
-	lineSeparation(lines, left_lines, right_lines, image_road_result_, 0.1);
+	lineSeparation(lines, left_lines, right_lines, image_road_result_, 0.1, curr_index_==start_index_);
 
 	//from bottom to top
 	cv::Vec4i left_line, right_line;
 	regression(left_lines, raw_image_.rows, raw_image_.cols, left_line);
 	regression(right_lines, raw_image_.rows, raw_image_.cols, right_line);
 
-	//cv::line(raw_image_, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-	//cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
-	
 	maskFusion(left_line, right_line, image_inRange, image_road_result_);
 
 	cv::Mat image_show(raw_image_.size(), CV_8UC3, cv::Scalar(0, 0, 0));
@@ -323,24 +334,16 @@ void imageProcess::loadImage() {
 
 	addWeighted(raw_image_, 0.75, image_show, 0.25, 0.0, image_show);
 	cv::imshow("final image", image_show);
-	cv::imwrite(file_name_ + "record/" + std::to_string(curr_index_++) + ".png", image_show);
-
-//	std::vector<cv::Point> approx;
-//	cv::approxPolyDP(cv::Mat(contours[imax]), approx, 10, true);      //多边形拟合
+	cv::imwrite(file_name_ + "record/" + std::to_string(curr_index_) + ".png", image_show);
 	
-	for (int i = 0; i < lines.size(); ++i) {
+	/*for (int i = 0; i < lines.size(); ++i) {
 		cv::Vec4i l = lines[i];
 		cv::line(raw_image_, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-	}
+	}*/
 
-//	const cv::Point* p = &approx[0];
-//	int m = (int)approx.size();
-//	std::cout << "length: " << m << std::endl;
-//	polylines(raw_image_, &p, &m, 1, true, cv::Scalar(0, 0, 255), 3);
-
-	cv::imshow("raw image", raw_image_);
+//	cv::imshow("raw image", raw_image_);
 //	cv::imshow("mask image", image_mask);
-	
+	curr_index_++;
 	std::cout << t1.toc() << std::endl;
 	cv::waitKey(0);
 }

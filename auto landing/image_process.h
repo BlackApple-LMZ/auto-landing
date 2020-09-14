@@ -30,9 +30,10 @@ namespace autolanding_lmz {
 		void maskFusion(cv::Vec4i left_line, cv::Vec4i right_line, const cv::Mat &image_mask_contour, cv::Mat &image_mask_result);
 		bool findCrosspoint(cv::Vec4i left_line, cv::Vec4i right_line, int rows, int cols, cv::Point &crosspoint);
 		void regression(std::vector<cv::Vec4i> lines, int rows, int cols, cv::Vec4i &fit_line);
-		void lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, const cv::Mat& image, double slope_thresh);
+		void lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, const cv::Mat& image, double slope_thresh, bool bfirst);
 		std::string file_name_;
-		int curr_index_ = 530;
+		int curr_index_;
+		int start_index_ = 200;
 
 		cv::Mat raw_image_;
 		cv::Mat image_road_result_; //final road image
