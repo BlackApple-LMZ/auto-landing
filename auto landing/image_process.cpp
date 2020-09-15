@@ -15,7 +15,7 @@ const cv::String window_capture_name = "Video Capture";
 const cv::String window_detection_name = "Object Detection";
 const int max_value_H = 360 / 2; //因为进行8位存储，所以除以2
 const int max_value = 255;
-const int TH_angle = 4;
+const double TH_angle = 1.0;
 
 int low_H = 0, low_S = 0, low_V = 0;
 int high_H = max_value_H, high_S = max_value, high_V = max_value;
@@ -98,12 +98,9 @@ void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::
 
 			//check the line whether in the mask(the last road area) mask is in bgr with 0 255 0 for true
 
-			/*std::cout << imageThin.at<float>(lines[i][1], lines[i][0]) << " " << imageThin.at<float>(lines[i][3], lines[i][2]) << std::endl;
-			cv::line(raw_image_, ini, fini, cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
-			cv::imshow("sssss", raw_image_);
-			cv::waitKey(0);*/
+			//std::cout << imageThin.at<float>(lines[i][1], lines[i][0]) << " " << imageThin.at<float>(lines[i][3], lines[i][2]) << std::endl;
 			//todo 15这个阈值可能需要再调一下
-			if (imageThin.at<float>(lines[i][1], lines[i][0]) > 15 || imageThin.at<float>(lines[i][3], lines[i][2]) > 15) {
+			if (imageThin.at<float>(lines[i][1], lines[i][0]) > 5 || imageThin.at<float>(lines[i][3], lines[i][2]) > 5) {
 				continue;
 			}
 		}
@@ -112,8 +109,9 @@ void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::
 		// 这里顺时针为正，与习惯相反，因为图像y轴是向下的 (-180， 180]
 		double slope = atan2(fini.y - ini.y, fini.x - ini.x);
 		double angle = slope * 180 / CV_PI;
-		if (angle < -(180-TH_angle) || abs(angle) < TH_angle || angle > 180-TH_angle 
-			|| abs(angle-90) < TH_angle || abs(angle+90) < TH_angle) {
+		
+		if ( (angle < -(180-TH_angle)) || (abs(angle) < TH_angle) || (angle > (180-TH_angle)) 
+			|| (abs(angle-90) < TH_angle) || (abs(angle+90) < TH_angle) ) {
 			continue;
 		}
 		else if (angle > 0) {
@@ -122,6 +120,10 @@ void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::
 		else
 			left_lines.push_back(lines[i]);
 
+		/*std::cout << angle<<" "<< abs(angle)<<" "<< abs(angle + 90) << std::endl;
+		cv::line(raw_image_, ini, fini, cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
+		cv::imshow("sssss", raw_image_);
+		cv::waitKey(0);*/
 		//std::cout << angle << " ";
 	}
 	//std::cout << std::endl;
@@ -262,22 +264,22 @@ void imageProcess::gray2bgr(cv::Mat gray, cv::Mat& bgr) {
 		}
 	}
 }
-void imageProcess::loadImage() {
+bool imageProcess::loadImage() {
 	
 	TicToc t1;
 	raw_image_ = cv::imread(file_name_ + std::to_string(curr_index_) + ".png");
-	
+	if (raw_image_.empty()) {
+		std::cout << "Can not read this image !" << std::endl;
+		return false;
+	}
+
 //	std::cout << t1.toc() << std::endl;
 
-	TicToc t11;
 	cv::Mat image_gauss;
 	cv::GaussianBlur(raw_image_, image_gauss, cv::Size(3, 3), 0, 0);
-//	std::cout << t11.toc() << std::endl;
 
-	TicToc t111;
 	cv::Mat image_hsv;
 	cvtColor(image_gauss, image_hsv, cv::COLOR_BGR2HSV); 
-//	std::cout << t111.toc() << std::endl;
 //	cv::imshow("gauss image", image_gauss);
 //	cv::imshow("hsv image", image_hsv);
 //	std::cout << t1.toc() << std::endl;
@@ -293,7 +295,7 @@ void imageProcess::loadImage() {
 	cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
 	morphologyEx(image_inRange, image_dilate, cv::MORPH_CLOSE, element);
 	//erode(srcImage, outImage, image);   //腐蚀：减少高亮部分
-	//imshow("腐蚀效果图", outImage);
+	//cv::imshow("腐蚀效果图", image_dilate);
 	
 	std::vector<std::vector<cv::Point>> contours;     
 	findContours(image_dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
@@ -309,6 +311,11 @@ void imageProcess::loadImage() {
 			imaxLength = length;
 			//std::cout << "length: " << length << std::endl;
 		}
+	}
+	std::cout << "length: " << imaxLength << std::endl;
+	if (imaxLength < 100) {
+		curr_index_++;
+		return false;
 	}
 
 	cv::Mat image_mask_contour(raw_image_.size(), CV_8UC1, cv::Scalar(0)), image_mask_line(raw_image_.size(), CV_8UC1, cv::Scalar(0));
@@ -327,7 +334,10 @@ void imageProcess::loadImage() {
 	regression(left_lines, raw_image_.rows, raw_image_.cols, left_line);
 	regression(right_lines, raw_image_.rows, raw_image_.cols, right_line);
 
-	maskFusion(left_line, right_line, image_inRange, image_road_result_);
+	cv::line(raw_image_, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+	cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+
+	maskFusion(left_line, right_line, image_mask_contour, image_road_result_);
 
 	cv::Mat image_show(raw_image_.size(), CV_8UC3, cv::Scalar(0, 0, 0));
 	gray2bgr(image_road_result_, image_show);
@@ -341,11 +351,13 @@ void imageProcess::loadImage() {
 		cv::line(raw_image_, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
 	}*/
 
-//	cv::imshow("raw image", raw_image_);
+	cv::imshow("raw image", raw_image_);
 //	cv::imshow("mask image", image_mask);
+	std::cout << curr_index_ << " " << t1.toc() << std::endl;
 	curr_index_++;
-	std::cout << t1.toc() << std::endl;
-	cv::waitKey(0);
+	cv::waitKey(1);
+
+	return true;
 }
 void imageProcess::selectHSVParam() {
 	cv::Mat image = cv::imread(file_name_ + "200.png");
@@ -373,11 +385,13 @@ void imageProcess::selectHSVParam() {
 
 	cv::imshow(window_detection_name, image_roi);
 	cv::waitKey(1);
+
+	return;
 }
 void imageProcess::detect() {
 	while(1)
-		loadImage();
-
+		if(!loadImage())
+			break;
 }
 
 

@@ -19,7 +19,7 @@ namespace autolanding_lmz {
 
 		void detect();
     private:
-		void loadImage();
+		bool loadImage();
 		/*
 		 * 通过track bar调整参数来实现选取ROI
 		 */
@@ -33,7 +33,7 @@ namespace autolanding_lmz {
 		void lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, const cv::Mat& image, double slope_thresh, bool bfirst);
 		std::string file_name_;
 		int curr_index_;
-		int start_index_ = 200;
+		int start_index_ = 750;
 
 		cv::Mat raw_image_;
 		cv::Mat image_road_result_; //final road image
