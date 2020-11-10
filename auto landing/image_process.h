@@ -11,14 +11,24 @@
 #include <string>
 #include <opencv2/opencv.hpp>
 
+#include "KMeans.h"
+
 namespace autolanding_lmz {
+	//todo 为什么1会出错，但是2就不会出错了？？？？？
+	//1 const char *window_capture_name = "Video Capture";
+	//2 const char window_capture_name[] = "Video Capture";
+
     class imageProcess {
     public:
 		imageProcess(std::string file_name);
         ~imageProcess();
 
 		void detect();
+		bool adjustDirection(double &angle_left, double &angle_right);
+		void collectData();
     private:
+		bool dataCompute(std::string name, double &angle_left, double &angle_right);
+
 		bool loadImage();
 		/*
 		 * 通过track bar调整参数来实现选取ROI
@@ -33,10 +43,12 @@ namespace autolanding_lmz {
 		void lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, const cv::Mat& image, double slope_thresh, bool bfirst);
 		std::string file_name_;
 		int curr_index_;
-		int start_index_ = 750;
+		int start_index_ = 520;
 
 		cv::Mat raw_image_;
 		cv::Mat image_road_result_; //final road image
+
+		std::shared_ptr<KMeans> pKMeans_;
     };
 }
 

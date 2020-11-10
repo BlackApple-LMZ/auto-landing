@@ -126,6 +126,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="image_process.cpp" />
+    <ClCompile Include="KMeans.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="auto_landing.cpp" />
     <ClCompile Include="XPlaneUDPClient.cpp">
@@ -135,7 +136,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="auto_landing.h" />
+    <ClInclude Include="data_collect.h" />
     <ClInclude Include="image_process.h" />
+    <ClInclude Include="KMeans.h" />
     <ClInclude Include="tic_toc.h" />
     <ClInclude Include="XPlaneUDPClient.h" />
     <ClInclude Include="XPUtils.h" />

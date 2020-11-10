@@ -44,6 +44,8 @@ void autoLanding::receiverCallbackFloat(std::string dataref, float value) {
 		curr_pitch_ = value;
 	else if (dataref == "sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot[0]")
 		curr_roll_ = value;
+	else if (dataref == "sim/network/misc/network_time_sec[0]")
+		curr_time_ = value;
 		
 //	std::cout << "receiverCallbackFloat got [" << dataref << "] and [" << value << "]" << std::endl;
 }
@@ -69,7 +71,9 @@ autoLanding::autoLanding()
 
 	pXplaneUDPClient_->setDebug(0);
 
-	pimageProcess_.reset(new imageProcess("E:\\ProgramData\\image1\\"));
+	//pimageProcess_.reset(new imageProcess("E:\\Games\\X-Plane 11 Global Scenery\\Output\\Cessna_172SP_"));
+	pimageProcess_.reset(new imageProcess("E:\\ProgramData\\heading dataset\\"));
+	pdataCollect_.reset(new dataCollect());
 }
 
 autoLanding::~autoLanding() {
@@ -82,9 +86,11 @@ int autoLanding::init() {
 	pXplaneUDPClient_->subscribeDataRef("sim/cockpit2/gauges/indicators/altitude_ft_pilot[0]", 10); //get altitude in feet
 	pXplaneUDPClient_->sendCommand("sim/autopilot/hsi_select_gps"); //select gps mode
 
-	pXplaneUDPClient_->subscribeDataRef("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot[0]", 10); //get heading in deg
+	pXplaneUDPClient_->subscribeDataRef("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot[0]", 20); //get heading in deg
 	pXplaneUDPClient_->subscribeDataRef("sim/cockpit2/gauges/indicators/pitch_AHARS_deg_pilot[0]", 10); //get pitch in deg
 	pXplaneUDPClient_->subscribeDataRef("sim/cockpit2/gauges/indicators/roll_AHARS_deg_pilot[0]", 10); //get roll in deg
+
+	pXplaneUDPClient_->subscribeDataRef("sim/network/misc/network_time_sec[0]", 20); //get current time
 
 	//check the status of the plane
 	pXplaneUDPClient_->subscribeDataRef("laminar/c172/fuel/fuel_quantity_L[0]", 10); //get fuel quantity in kg
@@ -98,11 +104,16 @@ void autoLanding::adjustDirection() {
 	//first Take a screenshot
 	pXplaneUDPClient_->sendCommand("sim/operation/screenshot");
 
-//	pimageProcess_->
+	double angle_left, angle_right;
+	//pimageProcess_->adjustDirection(angle_left, angle_right);
+	std::cout << angle_left << " " << angle_right << std::endl;
+
+
+	Sleep(200);
 }
 int autoLanding::taxiing() {
-	pXplaneUDPClient_->sendCommand("sim/flight_controls/brakes_toggle_max"); //brake
-	pXplaneUDPClient_->setDataRef("sim/multiplayer/controls/engine_throttle_request[0]", 1.0); //max engine
+	//pXplaneUDPClient_->sendCommand("sim/flight_controls/brakes_toggle_max"); //brake
+	pXplaneUDPClient_->setDataRef("sim/multiplayer/controls/engine_throttle_request[0]", 0.2); //max engine
 
 	pXplaneUDPClient_->subscribeDataRef("sim/flightmodel/position/indicated_airspeed[0]", 10); //get indicated airspeed in kias
 
@@ -164,7 +175,68 @@ int autoLanding::launch() {
 
 	return 0;
 }
+int autoLanding::collectData() {
 
+	pXplaneUDPClient_->subscribeDataRef("sim/cockpit2/gauges/indicators/heading_AHARS_deg_mag_pilot[0]", 20);
+	//	pXplaneUDPClient_->subscribeDataRef("sim/network/misc/network_time_sec[0]", 20); //get current time
+	std::cout << "start collect. Press enter to finish." << std::endl;
+	int count = 35;
+	
+	while (1) {
+		char ch = pdataCollect_->waitKey();
+		if (ch == 27) {
+			break;
+		}
+		std::cout << count << " " << curr_heading_ << std::endl;
+		std::ofstream out("E:\\ProgramData\\heading dataset\\" + std::to_string(count) + "\\heading.txt");
+		Sleep(2000); //等切换到xplane窗口
+		float x = 32473.5, z = -20520.0;
+		
+		pXplaneUDPClient_->setDataRef("sim/flightmodel/position/local_x[0]", x);
+		pXplaneUDPClient_->setDataRef("sim/flightmodel/position/local_z[0]", z);
+		//每个角度先采61张x方向变化的图 有的位置有的角度的图不一定能用 
+		for (int i = -30; i < 31; i++) {
+			float temp = x + 0.5 * i;
+			pXplaneUDPClient_->setDataRef("sim/flightmodel/position/local_x[0]", temp);
+			Sleep(1000);
+			out << curr_heading_ << std::endl;
+			pdataCollect_->keyPress();
+
+		}
+		pXplaneUDPClient_->setDataRef("sim/flightmodel/position/local_x[0]", 32473.5);
+		//再采61张z方向变化的图 有的位置有的角度的图不一定能用 
+		for (int i = -30; i < 31; i++) {
+			float temp = z + 0.5 * i;
+			pXplaneUDPClient_->setDataRef("sim/flightmodel/position/local_z[0]", temp);
+			Sleep(1000);
+			//std::cout << temp << " " << curr_heading_ << std::endl;
+			out << curr_heading_ << std::endl;
+			pdataCollect_->keyPress();
+		}
+		pXplaneUDPClient_->setDataRef("sim/flightmodel/position/local_z[0]", -20520.0);
+		
+		Sleep(1000); //等一会儿时间 不然太快了 最后一张还没有保存下来
+		//将图片剪切到相应的文件夹下
+		for (int i = 1; i <= 122; i++) {
+			std::string file1 = "E:\\Games\\X-Plane 11 Global Scenery\\Output\\Cessna_172SP_" + std::to_string(i) + ".png";
+			std::string file2 = "E:\\ProgramData\\heading dataset\\" + std::to_string(count) + "\\Cessna_172SP_" + std::to_string(i) + ".png";
+			if (!MoveFileA(file1.c_str(), file2.c_str()))
+			{
+				DWORD getlasterror;
+				getlasterror = GetLastError();
+				std::cout << getlasterror << std::endl;
+				printf_s("剪切失败");
+				return -1;
+			}
+		}
+		
+		//
+		out.close();
+		count++;
+	}
+	std::cout << "finish collect." << std::endl;
+	return 0;
+}
 int autoLanding::test() {
 
 //	pXplaneUDPClient_->subscribeDataRef("sim/aircraft/view/acf_descrip[0][40]", 1);
@@ -177,8 +249,9 @@ int autoLanding::test() {
 //	pXplaneUDPClient_->sendCommand("sim/flight_controls/brakes_toggle_max"); //brake
 
 //	pXplaneUDPClient_->setDataRef("sim/multiplayer/controls/engine_throttle_request[0]", 1.0);
-	pimageProcess_->detect();
-
+//	pimageProcess_->detect();
+	pimageProcess_->collectData();
+	
 	return 0;
 }
 

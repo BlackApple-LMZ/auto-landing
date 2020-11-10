@@ -30,6 +30,9 @@
     <ClCompile Include="image_process.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="KMeans.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="auto_landing.h">
@@ -45,6 +48,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="tic_toc.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="data_collect.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="KMeans.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

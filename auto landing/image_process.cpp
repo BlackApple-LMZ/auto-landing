@@ -11,11 +11,12 @@
 
 namespace autolanding_lmz {
 
+//注意这个地方是cv::String !!!!
 const cv::String window_capture_name = "Video Capture";
 const cv::String window_detection_name = "Object Detection";
-const int max_value_H = 360 / 2; //因为进行8位存储，所以除以2
-const int max_value = 255;
-const double TH_angle = 1.0;
+constexpr int max_value_H = 360 / 2; //因为进行8位存储，所以除以2
+constexpr int max_value = 255;
+constexpr double TH_angle = 1.0;
 
 int low_H = 0, low_S = 0, low_V = 0;
 int high_H = max_value_H, high_S = max_value, high_V = max_value;
@@ -76,6 +77,8 @@ imageProcess::imageProcess(std::string file_name): file_name_(file_name)
 	image_road_result_ = cv::Mat(raw_image_.size(), CV_8UC1, cv::Scalar(0)); //最终的交集mask
 
 	curr_index_ = start_index_;
+
+	pKMeans_.reset(new KMeans());
 }
 imageProcess::~imageProcess()
 {
@@ -85,8 +88,9 @@ imageProcess::~imageProcess()
 void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, const cv::Mat& mask, double slope_thresh, bool bfirst) {
 
 	std::vector<double> slopes;
+	std::vector<int> index, cluster;
 	// Calculate the slope of all the detected lines
-	for (int i = 0; i<lines.size(); i++) {
+	for (int i = 0; i < lines.size(); i++) {
 		cv::Point ini = cv::Point(lines[i][0], lines[i][1]);
 		cv::Point fini = cv::Point(lines[i][2], lines[i][3]);
 
@@ -105,26 +109,87 @@ void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::
 			}
 		}
 
+		
 		// Basic algebra: slope = (y1 - y0)/(x1 - x0)
-		// 这里顺时针为正，与习惯相反，因为图像y轴是向下的 (-180， 180]
+		// 这里顺时针为正，与习惯相反，因为图像y轴是向下的 
+		// 因为opencv霍夫变换直线检测的方向是沿x方向 所以角度范围是(-90，90]
 		double slope = atan2(fini.y - ini.y, fini.x - ini.x);
 		double angle = slope * 180 / CV_PI;
-		
-		if ( (angle < -(180-TH_angle)) || (abs(angle) < TH_angle) || (angle > (180-TH_angle)) 
-			|| (abs(angle-90) < TH_angle) || (abs(angle+90) < TH_angle) ) {
+
+		//std::cout << std::endl;
+		//std::cout << lines[i][0] << " " << lines[i][1] << " " << lines[i][2] << " " << lines[i][3] << " " << slope << std::endl;
+
+		if (/*(angle < -(180 - TH_angle)) || (angle > (180 - TH_angle)) || */(abs(angle) < TH_angle) || 
+			(abs(angle - 90) < TH_angle) || (abs(angle + 90) < TH_angle)) {
 			continue;
 		}
-		else if (angle > 0) {
+		//std::cout << std::endl;
+		//std::cout << lines[i][0] << " " << lines[i][1] << " " << lines[i][2] << " " << lines[i][3] << " " << slope << std::endl;
+		//用聚类解决左右直线分割
+		/*else if (angle > 0) {
 			right_lines.push_back(lines[i]);
 		}
 		else
 			left_lines.push_back(lines[i]);
+		*/
+		slopes.push_back(slope);
+		index.push_back(i);
 
 		/*std::cout << angle<<" "<< abs(angle)<<" "<< abs(angle + 90) << std::endl;
 		cv::line(raw_image_, ini, fini, cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
 		cv::imshow("sssss", raw_image_);
 		cv::waitKey(0);*/
 		//std::cout << angle << " ";
+	}
+	if (index.size() < 2) {
+		return;
+	}
+	pKMeans_->init(2, index, slopes);
+	pKMeans_->kmeans(cluster);
+
+	//check which cluster belongs to left
+	double cluster0{ 0.0 }, cluster1{ 0.0 };
+	int cnt0{ 0 }, cnt1{ 0 };
+	for (decltype(index.size()) i = 0; i < index.size(); i++) {
+		
+		if (cluster[i] == 0) {
+			cluster0 += slopes[i];
+			++cnt0;
+			left_lines.push_back(lines[index[i]]);
+			//std::cout << slopes[i] << std::endl;
+		}
+		else {
+			cluster1 += slopes[i];
+			++cnt1;
+			right_lines.push_back(lines[index[i]]);
+			//std::cout << slopes[i] << std::endl;
+		}
+			//
+	}
+	if (cnt0) {
+		cluster0 /= cnt0;
+		//std::cout << cnt0<<" "<< cluster0<<std::endl;
+	}
+	if (cnt1) {
+		cluster1 /= cnt1;
+		//std::cout << cnt1 << " " << cluster1 << std::endl;
+	}
+	if (abs(cluster1- cluster0) < 0.01) {
+		//只检测出了一条直线 合二为一 todo
+		left_lines.clear();
+	}
+	else {
+		//和霍夫变换有关系
+		if (cluster0 > 0 && cluster1 < 0) {
+			left_lines.swap(right_lines);
+		}
+		else if (cluster0 < 0 && cluster1 > 0) {
+			;
+		}
+		else {
+			if (cluster0 < cluster1)
+				left_lines.swap(right_lines);
+		}
 	}
 	//std::cout << std::endl;
 	
@@ -264,6 +329,99 @@ void imageProcess::gray2bgr(cv::Mat gray, cv::Mat& bgr) {
 		}
 	}
 }
+bool imageProcess::adjustDirection(double &angle_left, double &angle_right) {
+
+	TicToc t1;
+	raw_image_ = cv::imread(file_name_ + std::to_string(curr_index_) + ".png");
+	if (raw_image_.empty()) {
+		std::cout << "Can not read this image !" << std::endl;
+		return false;
+	}
+
+	//	std::cout << t1.toc() << std::endl;
+	cv::Mat image_gauss;
+	cv::GaussianBlur(raw_image_, image_gauss, cv::Size(3, 3), 0, 0);
+
+	cv::Mat image_hsv;
+	cvtColor(image_gauss, image_hsv, cv::COLOR_BGR2HSV);
+
+	cv::Mat image_inRange;
+	inRange(image_hsv, cv::Scalar(23, 0, 0), cv::Scalar(180, 255, 255), image_inRange);
+	cv::bitwise_not(image_inRange, image_inRange);
+	//cv::imshow("in range image", image_inRange);
+//	std::cout << t2.toc() << std::endl;
+
+	cv::Mat image_dilate;
+	cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+	morphologyEx(image_inRange, image_dilate, cv::MORPH_CLOSE, element);
+	//erode(srcImage, outImage, image);   //腐蚀：减少高亮部分
+	//cv::imshow("腐蚀效果图", image_dilate);
+
+	std::vector<std::vector<cv::Point>> contours;
+	findContours(image_dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+
+	int imax = 0; //find contour with max length
+	float imaxLength = 0.0;
+	for (int i = 0; i < contours.size(); i++)
+	{
+		float length = arcLength(contours[i], false);
+		if (length > imaxLength)
+		{
+			imax = i;
+			imaxLength = length;
+			//std::cout << "length: " << length << std::endl;
+		}
+	}
+
+	if (imaxLength < 100) {
+		curr_index_++;
+		return false;
+	}
+
+	cv::Mat image_mask_contour(raw_image_.size(), CV_8UC1, cv::Scalar(0)), image_mask_line(raw_image_.size(), CV_8UC1, cv::Scalar(0));
+	drawContours(image_mask_contour, contours, imax, cv::Scalar(255), CV_FILLED); //for fusion todo 这个是不是可以用inrange那个图来代替
+	drawContours(image_mask_line, contours, imax, cv::Scalar(255), 1);
+	//	drawContours(raw_image_, contours, imax, cv::Scalar(0, 0, 255), 3);
+		//cv::imshow("line image", image_mask_line);
+
+	std::vector<cv::Vec4i> lines, left_lines, right_lines;
+	//note 霍夫变换检测的直线结果 方向是沿x方向增大
+	cv::HoughLinesP(image_mask_line, lines, 1, CV_PI / 180, 80, 100, 10);
+	
+	lineSeparation(lines, left_lines, right_lines, image_road_result_, 0.1, curr_index_ == start_index_);
+
+	//from bottom to top
+	cv::Vec4i left_line, right_line;
+	regression(left_lines, raw_image_.rows, raw_image_.cols, left_line);
+	regression(right_lines, raw_image_.rows, raw_image_.cols, right_line);
+
+	angle_left = atan2(left_line[3] - left_line[1], left_line[2] - left_line[0]) * 180 / CV_PI;
+	angle_right = atan2(right_line[3] - right_line[1], right_line[2] - right_line[0]) * 180 / CV_PI;
+
+	cv::line(raw_image_, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+	cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+
+	maskFusion(left_line, right_line, image_mask_contour, image_road_result_);
+
+	cv::Mat image_show(raw_image_.size(), CV_8UC3, cv::Scalar(0, 0, 0));
+	gray2bgr(image_road_result_, image_show);
+
+	addWeighted(raw_image_, 0.75, image_show, 0.25, 0.0, image_show);
+	cv::imshow("final image", image_show);
+
+	/*for (int i = 0; i < lines.size(); ++i) {
+		cv::Vec4i l = lines[i];
+		cv::line(raw_image_, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+	}*/
+
+	cv::imshow("raw image", raw_image_);
+	//	cv::imshow("mask image", image_mask);
+	std::cout << curr_index_ << " " << t1.toc() << std::endl;
+	curr_index_++;
+	cv::waitKey(1);
+
+	return true;
+}
 bool imageProcess::loadImage() {
 	
 	TicToc t1;
@@ -280,6 +438,7 @@ bool imageProcess::loadImage() {
 
 	cv::Mat image_hsv;
 	cvtColor(image_gauss, image_hsv, cv::COLOR_BGR2HSV); 
+	cv::imwrite(file_name_ + "temp/" + std::to_string(curr_index_) + "_hsv.png", image_hsv);
 //	cv::imshow("gauss image", image_gauss);
 //	cv::imshow("hsv image", image_hsv);
 //	std::cout << t1.toc() << std::endl;
@@ -288,6 +447,7 @@ bool imageProcess::loadImage() {
 	cv::Mat image_inRange;
 	inRange(image_hsv, cv::Scalar(23, 0, 0), cv::Scalar(180, 255, 255), image_inRange);
 	cv::bitwise_not(image_inRange, image_inRange);
+	cv::imwrite(file_name_ + "temp/" + std::to_string(curr_index_) + "_bin.png", image_inRange);
 	//cv::imshow("in range image", image_inRange);
 //	std::cout << t2.toc() << std::endl;
 	
@@ -300,7 +460,7 @@ bool imageProcess::loadImage() {
 	std::vector<std::vector<cv::Point>> contours;     
 	findContours(image_dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
-	int imax = 0; //find contour with max length
+	int imax = 0; //find contour with max length  
 	float imaxLength = 0.0;
 	for (int i = 0; i < contours.size(); i++)
 	{
@@ -321,6 +481,7 @@ bool imageProcess::loadImage() {
 	cv::Mat image_mask_contour(raw_image_.size(), CV_8UC1, cv::Scalar(0)), image_mask_line(raw_image_.size(), CV_8UC1, cv::Scalar(0));
 	drawContours(image_mask_contour, contours, imax, cv::Scalar(255), CV_FILLED); //for fusion todo 这个是不是可以用inrange那个图来代替
 	drawContours(image_mask_line, contours, imax, cv::Scalar(255), 1);
+	cv::imwrite(file_name_ + "temp/" + std::to_string(curr_index_) + "_line.png", image_mask_line);
 //	drawContours(raw_image_, contours, imax, cv::Scalar(0, 0, 255), 3);
 	//cv::imshow("line image", image_mask_line);
 
@@ -334,8 +495,8 @@ bool imageProcess::loadImage() {
 	regression(left_lines, raw_image_.rows, raw_image_.cols, left_line);
 	regression(right_lines, raw_image_.rows, raw_image_.cols, right_line);
 
-	cv::line(raw_image_, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
-	cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+	//cv::line(raw_image_, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+	//cv::line(raw_image_, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 
 	maskFusion(left_line, right_line, image_mask_contour, image_road_result_);
 
@@ -393,8 +554,96 @@ void imageProcess::detect() {
 		if(!loadImage())
 			break;
 }
+void imageProcess::collectData() {
+	std::string pre_name = "E:\\ProgramData\\heading dataset\\";
+	for (int i = 24; i <= 84; i++) {
+		std::cout << "file: " << i << std::endl;
+		std::string file_name = pre_name + std::to_string(i) + "\\Cessna_172SP_";
+		std::ofstream out(pre_name + std::to_string(i) + "\\angle.txt");
+		for (int j = 1; j <= 122; j++) {
+			std::cout << j << " ";
+			std::string name = file_name + std::to_string(j);
+		
+			double angle_left{ 0.0 }, angle_right{ 0.0 };
+			dataCompute(name, angle_left, angle_right);
+			out << angle_left << " " << angle_right << std::endl;
+		}
+		std::cout << std::endl;
+		out.close();
+	}
+}
+bool imageProcess::dataCompute(std::string name, double &angle_left, double &angle_right) {
+	cv::Mat image = cv::imread(name + ".png");
+	if (image.empty()) {
+		std::cerr << "Can not read this image !" << std::endl;
+		return false;
+	}
 
+	cv::Mat image_gauss;
+	cv::GaussianBlur(image, image_gauss, cv::Size(3, 3), 0, 0);
 
+	cv::Mat image_hsv;
+	cvtColor(image_gauss, image_hsv, cv::COLOR_BGR2HSV);
+
+	cv::Mat image_inRange;
+	inRange(image_hsv, cv::Scalar(23, 0, 0), cv::Scalar(180, 255, 255), image_inRange);
+	cv::bitwise_not(image_inRange, image_inRange);
+
+	cv::Mat image_dilate;
+	cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+	morphologyEx(image_inRange, image_dilate, cv::MORPH_CLOSE, element);
+
+	std::vector<std::vector<cv::Point>> contours;
+	findContours(image_dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+
+	int imax = 0; //find contour with max length  
+	float imaxLength = 0.0;
+	for (int i = 0; i < contours.size(); i++)
+	{
+		float length = arcLength(contours[i], false);
+		if (length > imaxLength)
+		{
+			imax = i;
+			imaxLength = length;
+		}
+	}
+
+	if (imaxLength < 100) {
+		curr_index_++;
+		return false;
+	}
+
+	cv::Mat image_mask_line(image.size(), CV_8UC1, cv::Scalar(0));
+	drawContours(image_mask_line, contours, imax, cv::Scalar(255), 1);
+	//cv::imshow("watch1", image_mask_line);
+
+	std::vector<cv::Vec4i> lines, left_lines, right_lines;
+	cv::HoughLinesP(image_mask_line, lines, 1, CV_PI / 180, 80, 100, 10);
+
+	lineSeparation(lines, left_lines, right_lines, image_road_result_, 0.1, true);
+
+	//from bottom to top
+	cv::Vec4i left_line, right_line;
+	regression(left_lines, image.rows, image.cols, left_line);
+	regression(right_lines, image.rows, image.cols, right_line);
+
+	cv::Point ini = cv::Point(left_line[0], left_line[1]);
+	cv::Point fini = cv::Point(left_line[2], left_line[3]);
+	angle_left = atan2(fini.y - ini.y, fini.x - ini.x);
+
+	ini = cv::Point(right_line[0], right_line[1]);
+	fini = cv::Point(right_line[2], right_line[3]);
+	angle_right = atan2(fini.y - ini.y, fini.x - ini.x);
+
+	cv::line(image, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
+	cv::line(image, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+
+	cv::imshow("watch", image);
+	cv::imwrite(name + "_1.png", image);
+
+	cv::waitKey(1);
+	return true;
+}
 
 
 
