@@ -87,7 +87,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <SDLCheck>false</SDLCheck>
+      <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -115,7 +115,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -125,21 +125,35 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="alerting.cpp" />
+    <ClCompile Include="bird_view.cpp" />
+    <ClCompile Include="cp_socket.cpp" />
+    <ClCompile Include="digital_recg.cpp" />
+    <ClCompile Include="fileUtils.cpp" />
     <ClCompile Include="image_process.cpp" />
     <ClCompile Include="KMeans.cpp" />
+    <ClCompile Include="line_detect.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="auto_landing.cpp" />
+    <ClCompile Include="visualize.cpp" />
     <ClCompile Include="XPlaneUDPClient.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="XPUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="alerting.h" />
     <ClInclude Include="auto_landing.h" />
+    <ClInclude Include="bird_view.h" />
+    <ClInclude Include="cp_socket.h" />
     <ClInclude Include="data_collect.h" />
+    <ClInclude Include="digital_recg.h" />
+    <ClInclude Include="fileUtils.h" />
     <ClInclude Include="image_process.h" />
     <ClInclude Include="KMeans.h" />
+    <ClInclude Include="line_detect.h" />
     <ClInclude Include="tic_toc.h" />
+    <ClInclude Include="visualize.h" />
     <ClInclude Include="XPlaneUDPClient.h" />
     <ClInclude Include="XPUtils.h" />
   </ItemGroup>

@@ -74,12 +74,6 @@ autoLanding::autoLanding()
 	//pimageProcess_.reset(new imageProcess("E:\\Games\\X-Plane 11 Global Scenery\\Output\\Cessna_172SP_"));
 	pimageProcess_.reset(new imageProcess("E:\\ProgramData\\heading dataset\\"));
 	pdataCollect_.reset(new dataCollect());
-	pvisualize_.reset(new visualize());
-
-	pbirdView_.reset(new birdView());
-	pdigitalRecg_.reset(new digitalRecg());
-	pCPSocket_.reset(new CPSocket());
-	plineDetect_.reset(new lineDetect("E:\\ProgramData\\heading dataset\\"));
 }
 
 autoLanding::~autoLanding() {
@@ -112,7 +106,7 @@ void autoLanding::adjustDirection() {
 
 	double angle_left, angle_right;
 	//pimageProcess_->adjustDirection(angle_left, angle_right);
-	//std::cout << angle_left << " " << angle_right << std::endl;
+	std::cout << angle_left << " " << angle_right << std::endl;
 
 
 	Sleep(200);
@@ -274,134 +268,13 @@ int autoLanding::test() {
 //	pXplaneUDPClient_->sendCommand("sim/flight_controls/brakes_toggle_max"); //brake
 
 //	pXplaneUDPClient_->setDataRef("sim/multiplayer/controls/engine_throttle_request[0]", 1.0);
-	pimageProcess_->detect();
+//	pimageProcess_->detect();
 //	pimageProcess_->collectData();
-//	writeData();
+	writeData();
 
 	return 0;
 }
 
-int autoLanding::test_visual1() {
-	int count{ 1 };
-
-	char ch = pdataCollect_->waitKey();
-	if (ch == 27) {
-		return 1;
-	}
-
-	while (1) {
-		pdataCollect_->keyPress();
-		//wait until Image Process has stopped
-		/*while (!pimageProcess_->isStopped()) {
-			Sleep(1000);
-		}*/
-
-		//wait until dl has stopped
-		/*while (!pdl_->isStopped()) {
-			Sleep(1000);
-		}*/
-		if(pvisualize_->show(count))
-			++count;
-		Sleep(250);
-	}
-
-	return 0;
-}
-void readTextfile(std::string filename, double& heading) {
-	std::string line;
-	std::ifstream in_stream(filename.c_str());
-
-	while (!in_stream.eof()) {
-		std::getline(in_stream, line);
-		std::stringstream ss(line);
-		std::string buf;
-		int count = 0;
-		while (ss >> buf) {
-			count++;
-			if (count == 2) {
-				;
-			}
-			else if (count == 4) {
-				;
-			}
-			else if (count == 1) {
-				heading = atof(buf.c_str());
-			}
-
-		}
-	}
-	in_stream.close();
-}
-int autoLanding::test_visual() {
-
-	cv::VideoCapture capture("E:\\Games\\X-Plane 11 Global Scenery\\Output\\test.avi");
-	if (!capture.isOpened())
-		std::cout << "fail to open!" << std::endl;
-
-	long totalFrameNumber = capture.get(CV_CAP_PROP_FRAME_COUNT);
-
-	int frameToStart{0}, frameToStop = totalFrameNumber;
-	capture.set(CV_CAP_PROP_POS_FRAMES, frameToStart);
-
-	bool stop = false, restart = true;
-	cv::Mat frame;
-
-	int currentFrame = frameToStart;
-
-	//std::thread visual(&imageProcess::show, pimageProcess_);
-	//visual.join();
-
-	std::thread tbirdView(&birdView::run, pbirdView_);
-	tbirdView.detach();
-
-	std::thread tdigitalRecg(&digitalRecg::run, pdigitalRecg_);
-	tdigitalRecg.detach();
-
-	std::thread tCPSocket(&CPSocket::run, pCPSocket_);
-	tCPSocket.detach();
-
-	std::thread tlineDetect(&lineDetect::run, plineDetect_);
-	tlineDetect.detach();
-	//等待连接成功
-	while (!pCPSocket_->isConnected()) {
-		;
-	}
-
-	while (currentFrame < totalFrameNumber) {
-		if (!capture.read(frame)) {
-			std::cout << "读取视频失败" << std::endl;
-			break;
-		}
-		cv::imwrite("E:\\project\\auto landing\\auto landing\\auto landing\\image\\image.png", frame);
-
-		// 激活birdview 激活其他处理的线程 然后等待处理完 然后显示
-		pbirdView_->requestStart(frame);
-		pdigitalRecg_->requestStart(frame);
-		plineDetect_->requestStart(frame);
-		//pCPSocket_->requestStart();
-
-		//wait until BirdView Process has stopped
-		while (!pbirdView_->isStopped() || !pdigitalRecg_->isStopped() || !plineDetect_->isStopped()){// || !pCPSocket_->isStopped()) {
-			;
-		}
-
-		double predictHeading{ 0.0 };
-		readTextfile("E:\\project\\auto landing\\auto landing\\auto landing\\image\\data.txt", predictHeading);
-
-		pvisualize_->setRawImage(frame);
-		pvisualize_->setBirdImage(pbirdView_->getBirdView());
-		//pvisualize_->setLineImage(plineDetect_->getDetectLine());
-		//pvisualize_->setHeading(predictHeading, pdigitalRecg_->getHeading(), currentFrame);
-
-		std::cout << currentFrame << " " << pdigitalRecg_->getHeading() << std::endl;
-
-		pvisualize_->show();
-		++currentFrame;
-	}
-
-	capture.release();
-	return 0;
-}
 }
 
 

@@ -85,7 +85,7 @@ imageProcess::~imageProcess()
 
 }
 
-void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, const cv::Mat& mask, double slope_thresh, bool bfirst) {
+void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, double &left_angle, double &right_angle, const cv::Mat& mask, double slope_thresh, bool bfirst) {
 
 	std::vector<double> slopes;
 	std::vector<int> index, cluster;
@@ -139,7 +139,7 @@ void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::
 		cv::line(raw_image_, ini, fini, cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
 		cv::imshow("sssss", raw_image_);
 		cv::waitKey(0);*/
-		//std::cout << angle << " ";
+		//std::cout << slope << " ";
 	}
 	if (index.size() < 2) {
 		return;
@@ -174,25 +174,32 @@ void imageProcess::lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::
 		cluster1 /= cnt1;
 		//std::cout << cnt1 << " " << cluster1 << std::endl;
 	}
+	
 	if (abs(cluster1- cluster0) < 0.01) {
 		//只检测出了一条直线 合二为一 todo
 		left_lines.clear();
+		cluster0 = 0.0;
 	}
 	else {
 		//和霍夫变换有关系
 		if (cluster0 > 0 && cluster1 < 0) {
 			left_lines.swap(right_lines);
+			std::swap(cluster0, cluster1);
 		}
 		else if (cluster0 < 0 && cluster1 > 0) {
 			;
 		}
 		else {
-			if (cluster0 < cluster1)
+			if (cluster0 < cluster1) {
 				left_lines.swap(right_lines);
+				std::swap(cluster0, cluster1);
+			}
 		}
 	}
+	left_angle = cluster0;
+	right_angle = cluster1;
 	//std::cout << std::endl;
-	
+	//std::cout << "dddddddddddddddddddd " << cluster0 << " " << cluster1 << std::endl;
 	return;
 }
 void imageProcess::regression(std::vector<cv::Vec4i> lines, int rows, int cols, cv::Vec4i &fit_line) {
@@ -388,7 +395,8 @@ bool imageProcess::adjustDirection(double &angle_left, double &angle_right) {
 	//note 霍夫变换检测的直线结果 方向是沿x方向增大
 	cv::HoughLinesP(image_mask_line, lines, 1, CV_PI / 180, 80, 100, 10);
 	
-	lineSeparation(lines, left_lines, right_lines, image_road_result_, 0.1, curr_index_ == start_index_);
+	double left_angle, right_angle;
+	lineSeparation(lines, left_lines, right_lines, left_angle, right_angle, image_road_result_, 0.1, curr_index_ == start_index_);
 
 	//from bottom to top
 	cv::Vec4i left_line, right_line;
@@ -488,7 +496,8 @@ bool imageProcess::loadImage() {
 	std::vector<cv::Vec4i> lines, left_lines, right_lines;
 	cv::HoughLinesP(image_mask_line, lines, 1, CV_PI / 180, 80, 100, 10);
 
-	lineSeparation(lines, left_lines, right_lines, image_road_result_, 0.1, curr_index_==start_index_);
+	double left_angle, right_angle;
+	lineSeparation(lines, left_lines, right_lines, left_angle, right_angle, image_road_result_, 0.1, curr_index_ == start_index_);
 
 	//from bottom to top
 	cv::Vec4i left_line, right_line;
@@ -521,7 +530,11 @@ bool imageProcess::loadImage() {
 	return true;
 }
 void imageProcess::selectHSVParam() {
-	cv::Mat image = cv::imread(file_name_ + "200.png");
+	cv::Mat image = cv::imread("E:\\project\\auto landing\\auto landing\\auto landing\\image\\image.png");
+	if (image.empty()) {
+		std::cout << "image read error." << std::endl;
+		return;
+	}
 
 	cv::Mat image_gauss;
 	cv::GaussianBlur(image, image_gauss, cv::Size(3, 3), 0, 0);
@@ -534,7 +547,7 @@ void imageProcess::selectHSVParam() {
 	equalizeHist(hsvSplit[2], hsvSplit[2]);//直方图均衡化，对比均衡化
 	merge(hsvSplit, image_hsv);//合并三通道
 
-	cv::imshow("gauss image", image_gauss);
+	//cv::imshow("gauss image", image_gauss);
 	cv::imshow("hsv image", image_hsv);
 
 	setTrackBar();
@@ -551,8 +564,9 @@ void imageProcess::selectHSVParam() {
 }
 void imageProcess::detect() {
 	while(1)
-		if(!loadImage())
-			break;
+		selectHSVParam();
+		//if(!loadImage())
+			//break;
 }
 void imageProcess::collectData() {
 	std::string pre_name = "E:\\ProgramData\\heading dataset\\";
@@ -567,6 +581,7 @@ void imageProcess::collectData() {
 			double angle_left{ 0.0 }, angle_right{ 0.0 };
 			dataCompute(name, angle_left, angle_right);
 			out << angle_left << " " << angle_right << std::endl;
+			std::cout << angle_left << " " << angle_right << std::endl;
 		}
 		std::cout << std::endl;
 		out.close();
@@ -620,10 +635,12 @@ bool imageProcess::dataCompute(std::string name, double &angle_left, double &ang
 	std::vector<cv::Vec4i> lines, left_lines, right_lines;
 	cv::HoughLinesP(image_mask_line, lines, 1, CV_PI / 180, 80, 100, 10);
 
-	lineSeparation(lines, left_lines, right_lines, image_road_result_, 0.1, true);
+	lineSeparation(lines, left_lines, right_lines, angle_left, angle_right, image_road_result_, 0.1, true);
 
+	/*
 	//from bottom to top
 	cv::Vec4i left_line, right_line;
+	//这个地方用regression会把角度的符号发生变化
 	regression(left_lines, image.rows, image.cols, left_line);
 	regression(right_lines, image.rows, image.cols, right_line);
 
@@ -637,18 +654,19 @@ bool imageProcess::dataCompute(std::string name, double &angle_left, double &ang
 
 	cv::line(image, cv::Point(left_line[0], left_line[1]), cv::Point(left_line[2], left_line[3]), cv::Scalar(0, 0, 255), 1, cv::LINE_AA);
 	cv::line(image, cv::Point(right_line[0], right_line[1]), cv::Point(right_line[2], right_line[3]), cv::Scalar(0, 255, 255), 1, cv::LINE_AA);
+	*/
 
+	for (int i = 0; i < lines.size(); ++i) {
+		cv::Vec4i l = lines[i];
+		cv::line(image, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+	}
+	
 	cv::imshow("watch", image);
 	cv::imwrite(name + "_1.png", image);
 
 	cv::waitKey(1);
 	return true;
 }
-
-
-
-
-
 
 
 }

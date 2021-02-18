@@ -12,12 +12,6 @@
 #include "XPlaneUDPClient.h"
 #include "image_process.h"
 #include "data_collect.h"
-#include "visualize.h"
-#include "bird_view.h"
-#include "digital_recg.h"
-#include "alerting.h"
-#include "cp_socket.h"
-#include "line_detect.h"
 
 namespace autolanding_lmz{
     class autoLanding {
@@ -25,12 +19,6 @@ namespace autolanding_lmz{
 		autoLanding();
         ~autoLanding();
 
-		/*
-		 与xplane进行实时交互：模拟按键保存图片，然后在另一个窗口读取并且显示图像
-		 问题：按键的间隔设置不能太小，否则xplane响应不过来，卡顿
-		*/
-		int test_visual1();
-		int test_visual();
 		int test();
 		/*
 		 从xplane采集图像和航向角数据：调整飞机位置和航向角然后截图
@@ -53,12 +41,9 @@ namespace autolanding_lmz{
         std::shared_ptr<XPlaneUDPClient> pXplaneUDPClient_;
 		std::shared_ptr<imageProcess> pimageProcess_;
 		std::shared_ptr<dataCollect> pdataCollect_;
-		std::shared_ptr<visualize> pvisualize_;
-
-		std::shared_ptr<birdView> pbirdView_;
-		std::shared_ptr<digitalRecg> pdigitalRecg_;
-		std::shared_ptr<CPSocket> pCPSocket_;
-		std::shared_ptr<lineDetect> plineDetect_;
+		/*
+        std::shared_ptr<cloudOperate> pcloudOperate_;
+        std::shared_ptr<optimize> poptimize_;*/
 
 		//status of plane
 		float init_altitude_ = 0.0;

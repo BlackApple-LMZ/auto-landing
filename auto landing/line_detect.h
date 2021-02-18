@@ -1,40 +1,46 @@
 //
-// Created by limz on 2020/8/27.
-// 图像的相关操作
+// Created by limz on 2021/2/05.
+// 检测跑道边界线
 //
 
-#ifndef IMAGE_PROCESS_H
-#define IMAGE_PROCESS_H
+#ifndef LINE_DETECT_H
+#define LINE_DETECT_H
 
 #include <iostream>
 #include <vector>
 #include <string>
 #include <opencv2/opencv.hpp>
 
+#include <mutex>
 #include "KMeans.h"
 
 namespace autolanding_lmz {
-	//todo 为什么1会出错，但是2就不会出错了？？？？？
-	//1 const char *window_capture_name = "Video Capture";
-	//2 const char window_capture_name[] = "Video Capture";
 
-    class imageProcess {
+    class lineDetect {
     public:
-		imageProcess(std::string file_name);
-        ~imageProcess();
+		lineDetect(std::string file_name);
+        ~lineDetect();
 
-		void detect();
-		bool adjustDirection(double &angle_left, double &angle_right);
-		void collectData();
+		//auto_landing 请求开始检测直线//
+		void requestStart(const cv::Mat& image);
+		bool isStopped();
+		void setFinish();
+		cv::Mat getDetectLine();
 
+		void run();
     private:
-		bool dataCompute(std::string name, double &angle_left, double &angle_right);
+		//这个是用hsv提取出跑道区域轮廓，然后根据轮廓搞边界线//
+		bool detectLine();
+		//这个是用hsv单独提取跑道边界线的方法//
+		bool detectLine1();
+
+		std::mutex mutexStop_, mutexRequestStart_;
+		bool startRequested_{ false }, stopped_{ false };
+
+		cv::Mat lineDetect_image_;
+		cv::Mat raw_image_;		
 
 		bool loadImage();
-		/*
-		 * 通过track bar调整参数来实现选取ROI
-		 */
-		void selectHSVParam();
 		
 		void gray2bgr(cv::Mat gray, cv::Mat& bgr);
 		bool checkLine(cv::Vec4i line);
@@ -46,13 +52,13 @@ namespace autolanding_lmz {
 		int curr_index_;
 		int start_index_ = 520;
 
-		cv::Mat raw_image_;
-		cv::Mat image_road_result_; //final road image
+		//cv::Mat raw_image_;
+		//cv::Mat image_road_result_; //final road image
 
-		std::shared_ptr<KMeans> pKMeans_;
+		//std::shared_ptr<KMeans> pKMeans_;
     };
 }
 
 
 
-#endif //IMAGE_PROCESS_H
+#endif //LINE_DETECT_H

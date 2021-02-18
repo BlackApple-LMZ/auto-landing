@@ -33,6 +33,27 @@
     <ClCompile Include="KMeans.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="fileUtils.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="visualize.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="bird_view.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="digital_recg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="alerting.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="cp_socket.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="line_detect.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="auto_landing.h">
@@ -54,6 +75,27 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="KMeans.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="fileUtils.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="visualize.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="bird_view.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="digital_recg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="alerting.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="cp_socket.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="line_detect.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
