@@ -357,15 +357,16 @@ int autoLanding::test_visual() {
 	std::thread tdigitalRecg(&digitalRecg::run, pdigitalRecg_);
 	tdigitalRecg.detach();
 
-	std::thread tCPSocket(&CPSocket::run, pCPSocket_);
-	tCPSocket.detach();
-
 	std::thread tlineDetect(&lineDetect::run, plineDetect_);
 	tlineDetect.detach();
+
+	/*std::thread tCPSocket(&CPSocket::run, pCPSocket_);
+	tCPSocket.detach();
+
 	//等待连接成功
 	while (!pCPSocket_->isConnected()) {
 		;
-	}
+	}*/
 
 	while (currentFrame < totalFrameNumber) {
 		if (!capture.read(frame)) {
@@ -375,13 +376,21 @@ int autoLanding::test_visual() {
 		cv::imwrite("E:\\project\\auto landing\\auto landing\\auto landing\\image\\image.png", frame);
 
 		// 激活birdview 激活其他处理的线程 然后等待处理完 然后显示
-		pbirdView_->requestStart(frame);
+		
 		pdigitalRecg_->requestStart(frame);
 		plineDetect_->requestStart(frame);
 		//pCPSocket_->requestStart();
 
 		//wait until BirdView Process has stopped
-		while (!pbirdView_->isStopped() || !pdigitalRecg_->isStopped() || !plineDetect_->isStopped()){// || !pCPSocket_->isStopped()) {
+		while (/*!pbirdView_->isStopped() || */!pdigitalRecg_->isStopped() || !plineDetect_->isStopped()){// || !pCPSocket_->isStopped()) {
+			;
+		}
+		std::cout << "contour size in main1: " << plineDetect_->getContour().size() << std::endl;
+		//之前这个顺序写反了 导致birdview线程开始处理 但是contour还没有来得及传入//
+		pbirdView_->setContour(plineDetect_->getContour());
+		pbirdView_->requestStart(frame);
+		std::cout << "contour size in main2: " << plineDetect_->getContour().size() << std::endl;
+		while (!pbirdView_->isStopped()) {
 			;
 		}
 
@@ -393,7 +402,7 @@ int autoLanding::test_visual() {
 		//pvisualize_->setLineImage(plineDetect_->getDetectLine());
 		//pvisualize_->setHeading(predictHeading, pdigitalRecg_->getHeading(), currentFrame);
 
-		std::cout << currentFrame << " " << pdigitalRecg_->getHeading() << std::endl;
+		std::cout << "currentFrame: " << currentFrame << " " << pdigitalRecg_->getHeading() << std::endl;
 
 		pvisualize_->show();
 		++currentFrame;

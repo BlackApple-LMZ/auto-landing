@@ -26,6 +26,8 @@ namespace autolanding_lmz {
 		bool isStopped();
 		void setFinish();
 		cv::Mat getDetectLine();
+		//获取检测的轮廓用来显示或者birdview用//
+		std::vector<cv::Point> getContour();
 
 		void run();
     private:
@@ -52,6 +54,7 @@ namespace autolanding_lmz {
 		int curr_index_;
 		int start_index_ = 520;
 
+		std::vector<cv::Point> contour_;
 		//cv::Mat raw_image_;
 		//cv::Mat image_road_result_; //final road image
 

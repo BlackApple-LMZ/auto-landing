@@ -29,7 +29,7 @@ lineDetect::~lineDetect()
 }
 void lineDetect::requestStart(const cv::Mat& image)
 {
-	raw_image_ = image;
+	raw_image_ = image.clone();
 	std::unique_lock<std::mutex> lock(mutexRequestStart_);
 	startRequested_ = true;
 	std::unique_lock<std::mutex> lock2(mutexStop_);
@@ -68,6 +68,10 @@ void lineDetect::run() {
 cv::Mat lineDetect::getDetectLine()
 {
 	return lineDetect_image_;
+}
+std::vector<cv::Point> lineDetect::getContour()
+{
+	return contour_;
 }
 bool lineDetect::detectLine1() {
 
@@ -122,9 +126,11 @@ bool lineDetect::detectLine() {
 		curr_index_++;
 		return false;
 	}
+	contour_ = contours[imax];
 
+	std::cout << "contour size in line detect: " << contour_.size() << std::endl;
 	drawContours(raw_image_, contours, imax, cv::Scalar(0, 0, 255), 3);
-	cv::imshow("aaaaaaaaaa", raw_image_);
+	cv::imshow("contour", raw_image_);
 	cv::waitKey(1);
 	return true;
 }
