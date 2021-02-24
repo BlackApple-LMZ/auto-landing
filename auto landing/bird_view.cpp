@@ -116,7 +116,7 @@ void birdView::run(){
 			;
 		}
 		computeBirdview();
-		//todo 用透视变换得到鸟瞰图 目前先随便加载一张图
+		//todo 用透视变换计算鸟瞰图
 		//test(raw_image_, birdView_image_);
 		birdView_image_ = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\" + std::to_string(index++) + ".jpg");
 		if (index > 6)
