@@ -31,9 +31,9 @@ namespace autolanding_lmz {
 	void digitalRecg::requestStart(const cv::Mat& image)
 	{
 		//ת�ɻҶ�ͼ
-		raw_image_ = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_" + std::to_string(++index) + ".png", CV_LOAD_IMAGE_GRAYSCALE);
+		//raw_image_ = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_" + std::to_string(++index) + ".png", CV_LOAD_IMAGE_GRAYSCALE);
 		//cv::cvtColor(raw_image_, raw_image_, CV_RGB2GRAY);
-		//cv::cvtColor(image, raw_image_, CV_BGR2GRAY);
+		cv::cvtColor(image, raw_image_, CV_BGR2GRAY);
 		std::unique_lock<std::mutex> lock(mutexRequestStart_);
 		startRequested_ = true;
 		std::unique_lock<std::mutex> lock2(mutexStop_);
@@ -107,24 +107,24 @@ namespace autolanding_lmz {
 			cv::Mat test = raw_image_(rect).clone();
 			int result = getSubstract(test, flag);
 			if (result == 10) {
-				std::cout << ".";
+				//std::cout << ".";
 				index = j;
 			}
 			else if (result == 11) {
-				std::cout << "-";
+				//std::cout << "-";
 				negative = true;
 			}
 			else if (result == 12) {
-				std::cout << " ";
+				//std::cout << " ";
 				continue;
 			}
 			else {
-				std::cout << result;
+				//std::cout << result;
 				res = 10 * res + result;
 			}
 		}
-		std::cout << std::endl;
-		std::cout << res << std::endl;
+		//std::cout << std::endl;
+		//std::cout << res << std::endl;
 		double result = 0.0;
 		if (index > 0) {
 			result = res * 1.0 / (pow(10, (data_num - index - 1)));

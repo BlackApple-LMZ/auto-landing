@@ -74,6 +74,38 @@ cv::Mat birdView::getBirdView()
 void birdView::setContour(const std::vector<cv::Point>& contour) {
 	contour_ = contour;
 }
+void birdView::setPosition(double heading, double pitch, double roll, double x, double y, double z) {
+	double scale = 3.1415926 / 180;
+	//初始化欧拉角(Z-Y-X)
+	Eigen::Vector3d ea(pitch*scale, heading*scale, roll*scale);
+
+	Eigen::Matrix3d rotation_matrix;
+	rotation_matrix = Eigen::AngleAxisd(ea[0], Eigen::Vector3d::UnitZ()) *
+		Eigen::AngleAxisd(ea[1], Eigen::Vector3d::UnitY()) *
+		Eigen::AngleAxisd(ea[2], Eigen::Vector3d::UnitX());
+
+	Eigen::Vector3d tr;
+	tr << x, y, z;
+
+	T_cur_.setIdentity();
+	T_cur_.block<3, 3>(0, 0) = rotation_matrix;
+	T_cur_.topRightCorner<3, 1>() = tr;
+
+	if (++index_ == 3) {
+		//将第三帧的位姿设置为初始位姿 录视频的时候前几帧会是其他状态//
+		T_origin_.setIdentity();
+		T_origin_.block<3, 3>(0, 0) = rotation_matrix;
+		T_origin_.topRightCorner<3, 1>() = tr;
+
+		T_origin_inv_ = T_origin_.inverse();
+	}
+	else if (index_ > 3) {
+		Toc_ = T_origin_inv_ * T_cur_;
+	}
+
+	std::cout << T_cur_ << std::endl;
+}
+
 void birdView::run(){
 
 	startRequested_ = false;
@@ -127,7 +159,7 @@ void birdView::computeBirdview() {
 		cv::Point2f(min_x, TH_HEIGHT),
 		cv::Point2f(max_x, TH_HEIGHT) };
 
-	std::cout << left.x << " " << left.y << " " << right.x << " " << right.y << " " << min_x << " " << max_x << std::endl;
+	//std::cout << "in bird view: " << left.x << " " << left.y << " " << right.x << " " << right.y << " " << min_x << " " << max_x << std::endl;
 
 	cv::Point2f dst_points[] = {
 		cv::Point2f(300, 719),

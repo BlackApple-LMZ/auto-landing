@@ -128,7 +128,7 @@ bool lineDetect::detectLine() {
 	}
 	contour_ = contours[imax];
 
-	std::cout << "contour size in line detect: " << contour_.size() << std::endl;
+	//std::cout << "contour size in line detect: " << contour_.size() << std::endl;
 	drawContours(raw_image_, contours, imax, cv::Scalar(0, 0, 255), 3);
 	cv::imshow("contour", raw_image_);
 	//cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\contour.png", raw_image_);

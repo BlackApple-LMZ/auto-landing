@@ -10,6 +10,8 @@
 #include <vector>
 #include <string>
 #include <opencv2/opencv.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <mutex>
 
@@ -26,6 +28,8 @@ namespace autolanding_lmz {
 		void setFinish();
 		cv::Mat getBirdView();
 		void setContour(const std::vector<cv::Point>& contour);
+		//设置飞行状态参数，计算相对初始时刻的姿态变换矩阵//
+		void setPosition(double heading, double pitch, double roll, double x, double y, double z);
 
 		void test(const cv::Mat& image, cv::Mat& perspective);
 		//main function
@@ -33,13 +37,17 @@ namespace autolanding_lmz {
     private:
 		void computeBirdview();
 
-
 		std::mutex mutexStop_, mutexRequestStart_;
 		bool startRequested_{ false }, stopped_{ false };
 
 		cv::Mat birdView_image_;
 		cv::Mat raw_image_;
 		std::vector<cv::Point> contour_;
+
+		Eigen::Matrix4d T_origin_, T_origin_inv_;
+		Eigen::Matrix4d T_cur_, Toc_;
+
+		int index_ = 0;
     };
 }
 

@@ -388,6 +388,7 @@ int autoLanding::test_visual() {
 
 		//之前这个顺序写反了 导致birdview线程开始处理 但是contour还没有来得及传入//
 		pbirdView_->setContour(plineDetect_->getContour());
+		pbirdView_->setPosition(pdigitalRecg_->getHeading(), pdigitalRecg_->getPitch(), pdigitalRecg_->getRoll(), pdigitalRecg_->getX(), pdigitalRecg_->getY(), pdigitalRecg_->getZ());
 		pbirdView_->requestStart(frame);
 
 		while (!pbirdView_->isStopped()) {
