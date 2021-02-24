@@ -162,7 +162,7 @@ namespace autolanding_lmz {
 		resize(heading_image_, tempHeadingImage, cv::Size(600, 360));
 
 		cv::imshow("show", showWindowImages);
-		cv::waitKey(1);
+		cv::waitKey(0);
 
 		return true;
 	}

@@ -385,11 +385,11 @@ int autoLanding::test_visual() {
 		while (/*!pbirdView_->isStopped() || */!pdigitalRecg_->isStopped() || !plineDetect_->isStopped()){// || !pCPSocket_->isStopped()) {
 			;
 		}
-		std::cout << "contour size in main1: " << plineDetect_->getContour().size() << std::endl;
+
 		//之前这个顺序写反了 导致birdview线程开始处理 但是contour还没有来得及传入//
 		pbirdView_->setContour(plineDetect_->getContour());
 		pbirdView_->requestStart(frame);
-		std::cout << "contour size in main2: " << plineDetect_->getContour().size() << std::endl;
+
 		while (!pbirdView_->isStopped()) {
 			;
 		}
@@ -402,7 +402,8 @@ int autoLanding::test_visual() {
 		//pvisualize_->setLineImage(plineDetect_->getDetectLine());
 		//pvisualize_->setHeading(predictHeading, pdigitalRecg_->getHeading(), currentFrame);
 
-		std::cout << "currentFrame: " << currentFrame << " " << pdigitalRecg_->getHeading() << std::endl;
+		std::cout << "currentFrame: " << currentFrame << " " << pdigitalRecg_->getHeading() << " " << pdigitalRecg_->getPitch() << " " << pdigitalRecg_->getRoll();
+		std::cout << " " << pdigitalRecg_->getX() << " " << pdigitalRecg_->getY() << " " << pdigitalRecg_->getZ() << std::endl;
 
 		pvisualize_->show();
 		++currentFrame;

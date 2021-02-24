@@ -101,7 +101,7 @@ void birdView::computeBirdview() {
 	int min_x = INT_MAX, max_x = INT_MIN;
 	cv::Point2f left(1280, 720), right(1280, 720);
 
-	std::cout << contour_.size() << std::endl;
+
 	for (int i = 0; i < contour_.size(); i++) {
 		cv::Point pt = contour_[i];
 		if (pt.y == TH_HEIGHT) {
@@ -119,19 +119,19 @@ void birdView::computeBirdview() {
 				right = pt;
 		}
 	}
-	std::cout << contour_.size() << std::endl;
+
 	//然后选择匹配的点对构建鸟瞰图//
 	cv::Point2f src_points[] = {
 		left,
 		right,
-		cv::Point2f(min_x, 390),
-		cv::Point2f(max_x, 390) };
+		cv::Point2f(min_x, TH_HEIGHT),
+		cv::Point2f(max_x, TH_HEIGHT) };
 
 	std::cout << left.x << " " << left.y << " " << right.x << " " << right.y << " " << min_x << " " << max_x << std::endl;
 
 	cv::Point2f dst_points[] = {
-		cv::Point2f(300, 600),
-		cv::Point2f(980, 600),
+		cv::Point2f(300, 719),
+		cv::Point2f(980, 719),
 		cv::Point2f(300, 0),
 		cv::Point2f(980, 0) };
 
@@ -145,7 +145,9 @@ void birdView::computeBirdview() {
 	}
 	cv::imshow("eeeeeeeeeeeeeeeeeeeee", raw_image_);
 	cv::imshow("ssssssssssssssssss", perspective);
-	cv::waitKey(0);
+	//cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\point.png", raw_image_);
+	//cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\perspective.png", perspective);
+	cv::waitKey(1);
 }
 
 

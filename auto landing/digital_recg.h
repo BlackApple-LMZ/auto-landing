@@ -23,6 +23,11 @@ namespace autolanding_lmz {
 
 		//返回航向角
 		double getHeading();
+		double getPitch();
+		double getRoll();
+		double getX();
+		double getY();
+		double getZ();
 
 		//main function
 		void run();
@@ -31,10 +36,12 @@ namespace autolanding_lmz {
 		int get_pxsum(const cv::Mat& image);
 
 		//通过模板匹配找到相似的字符
-		int getSubstract(const cv::Mat& image);
+		int getSubstract(const cv::Mat& image, int flag);
 
 		//抓取数据
-		double recognition(int start_left, int start_top);
+		//data_num 是指抓取的位数 xplane显示器是6位 插件dataref是8位
+		//flag 是指选取不同的template 0表示xplane显示器 1表示插件dataref
+		double recognition(int start_left, int start_top, int data_num, int flag);
 
 		std::mutex mutexStop_, mutexRequestStart_;
 		bool startRequested_{ false }, stopped_{ false };
@@ -42,7 +49,8 @@ namespace autolanding_lmz {
 		cv::Mat raw_image_;
 
 		//抓取到的数据
-		double heading_;
+		double heading_, pitch_, roll_, local_x_, local_y_, local_z_;
+		int index = 0;
 	};
 }
 
