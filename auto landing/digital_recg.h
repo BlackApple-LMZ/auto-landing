@@ -36,7 +36,10 @@ namespace autolanding_lmz {
 		int get_pxsum(const cv::Mat& image);
 
 		//通过模板匹配找到相似的字符
-		int getSubstract(const cv::Mat& image, int flag);
+		//image 输入的待检测的字符 
+		//flag 选择模板0是蓝色的1是绿色的那一套
+		//index 当前检测的数字是第几位
+ 		int getSubstract(const cv::Mat& image, int flag, int index);
 
 		//抓取数据
 		//data_num 是指抓取的位数 xplane显示器是6位 插件dataref是8位
@@ -50,7 +53,7 @@ namespace autolanding_lmz {
 
 		//抓取到的数据
 		double heading_, pitch_, roll_, local_x_, local_y_, local_z_;
-		int index = 0;
+		int index = 38;
 	};
 }
 

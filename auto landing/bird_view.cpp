@@ -74,10 +74,18 @@ cv::Mat birdView::getBirdView()
 void birdView::setContour(const std::vector<cv::Point>& contour) {
 	contour_ = contour;
 }
+cv::Mat birdView::toCvMat(const Eigen::Matrix4d &m)
+{
+	cv::Mat cvMat(3, 3, CV_32F);
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			cvMat.at<float>(i, j) = m(i, j);
+	return cvMat.clone();
+}
 void birdView::setPosition(double heading, double pitch, double roll, double x, double y, double z) {
 	double scale = 3.1415926 / 180;
-	//初始化欧拉角(Z-Y-X)
-	Eigen::Vector3d ea(pitch*scale, heading*scale, roll*scale);
+	//初始化欧拉角(Z-Y-X) 11.22是手动加的修正
+	Eigen::Vector3d ea(pitch*scale, (heading-11.22)*scale, roll*scale);
 
 	Eigen::Matrix3d rotation_matrix;
 	rotation_matrix = Eigen::AngleAxisd(ea[0], Eigen::Vector3d::UnitZ()) *
@@ -101,9 +109,16 @@ void birdView::setPosition(double heading, double pitch, double roll, double x, 
 	}
 	else if (index_ > 3) {
 		Toc_ = T_origin_inv_ * T_cur_;
+		cv::Mat image = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_40.png");
+		cv::Mat perspective, M = toCvMat(Toc_);
+		//std::cout << Toc_ << std::endl;
+		//std::cout << M << std::endl;
+
+		cv::warpPerspective(image, perspective, M, cv::Size(image.cols, image.rows), cv::INTER_LINEAR);
+		cv::imshow("perspective", perspective);
 	}
 
-	std::cout << T_cur_ << std::endl;
+	//std::cout << T_cur_ << std::endl;
 }
 
 void birdView::run(){
@@ -132,7 +147,6 @@ void birdView::computeBirdview() {
 	//先根据contour选择4个顶点:根据坐标值来选取//
 	int min_x = INT_MAX, max_x = INT_MIN;
 	cv::Point2f left(1280, 720), right(1280, 720);
-
 
 	for (int i = 0; i < contour_.size(); i++) {
 		cv::Point pt = contour_[i];
@@ -168,7 +182,7 @@ void birdView::computeBirdview() {
 		cv::Point2f(980, 0) };
 
 	cv::Mat M = cv::getPerspectiveTransform(src_points, dst_points);
-
+	//std::cout << M << std::endl;
 	cv::Mat perspective;
 	cv::warpPerspective(raw_image_, perspective, M, cv::Size(raw_image_.cols, raw_image_.rows), cv::INTER_LINEAR);
 

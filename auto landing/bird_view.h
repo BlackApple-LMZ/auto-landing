@@ -36,6 +36,8 @@ namespace autolanding_lmz {
 		void run();
     private:
 		void computeBirdview();
+		//eigen to cv mat
+		cv::Mat toCvMat(const Eigen::Matrix4d &m);
 
 		std::mutex mutexStop_, mutexRequestStart_;
 		bool startRequested_{ false }, stopped_{ false };

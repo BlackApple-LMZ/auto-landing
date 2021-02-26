@@ -31,9 +31,12 @@ namespace autolanding_lmz {
 	void digitalRecg::requestStart(const cv::Mat& image)
 	{
 		//转成灰度图
-		//raw_image_ = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_" + std::to_string(++index) + ".png", CV_LOAD_IMAGE_GRAYSCALE);
+		//if(++index > 5)
+			raw_image_ = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_40.png" /*+ std::to_string(++index) + ".png"*/, CV_LOAD_IMAGE_GRAYSCALE);
+			raw_image_ = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_" + std::to_string(++index) + ".png", CV_LOAD_IMAGE_GRAYSCALE);
 		//cv::cvtColor(raw_image_, raw_image_, CV_RGB2GRAY);
-		cv::cvtColor(image, raw_image_, CV_BGR2GRAY);
+		//else
+			//cv::cvtColor(image, raw_image_, CV_BGR2GRAY);
 		std::unique_lock<std::mutex> lock(mutexRequestStart_);
 		startRequested_ = true;
 		std::unique_lock<std::mutex> lock2(mutexStop_);
@@ -105,7 +108,7 @@ namespace autolanding_lmz {
 		for (int j = 0; j < data_num; j++) {
 			cv::Rect rect(start_left + j * digital_width, start_top, digital_width, digital_height);
 			cv::Mat test = raw_image_(rect).clone();
-			int result = getSubstract(test, flag);
+			int result = getSubstract(test, flag, j);
 			if (result == 10) {
 				//std::cout << ".";
 				index = j;
@@ -144,7 +147,7 @@ namespace autolanding_lmz {
 		return a;
 	}
 
-	int digitalRecg::getSubstract(const cv::Mat& image, int flag) {
+	int digitalRecg::getSubstract(const cv::Mat& image, int flag, int index) {
 		cv::Mat result_img;
 		int min = INT_MAX;
 		int result_num = 0;
@@ -163,6 +166,9 @@ namespace autolanding_lmz {
 			absdiff(templ, image, result_img);
 
 			if (get_pxsum(result_img) < min) {
+				//如果检测出负号 但是这一位数字不是第一位 说明检测出错了
+				if (i == 11 && index != 0)
+					continue;
 				min = get_pxsum(result_img);
 				result_num = i;
 			}
