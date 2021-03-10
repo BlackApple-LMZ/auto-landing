@@ -31,6 +31,8 @@ namespace autolanding_lmz{
 		*/
 		int test_visual1();
 		int test_visual();
+		//测试ipm鸟瞰图的算法//
+		int test_ipm();
 		int test();
 		/*
 		 从xplane采集图像和航向角数据：调整飞机位置和航向角然后截图

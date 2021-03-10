@@ -15,7 +15,8 @@ using namespace std;
 int main(int argc, char** argv)
 {
 	autolanding_lmz::autoLanding node;
-	node.test_visual();
+	node.test_ipm();
+	//node.test_visual();
 	//node.test();
 	
 	//autolanding_lmz::fileUtils node;

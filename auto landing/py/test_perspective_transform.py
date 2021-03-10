@@ -32,7 +32,7 @@ def perspective_transform(img):
 
 
 if __name__ == '__main__':
-	img_file = 'test/204.png'
+	img_file = 'test/Cessna_172SP_1.png'
 
 	img = mpimg.imread(img_file)
 

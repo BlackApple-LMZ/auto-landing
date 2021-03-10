@@ -99,6 +99,10 @@ bool lineDetect::detectLine() {
 	cv::Mat image_hsv;
 	cvtColor(image_gauss, image_hsv, cv::COLOR_BGR2HSV);
 
+	//195是直方图均衡化前的参数 也许均衡化后这个数值可以固定
+	inRange(image_hsv, cv::Scalar(0, 0, 0), cv::Scalar(180, 255, 195), lineDetect_image_);
+	cv::bitwise_not(lineDetect_image_, lineDetect_image_);
+
 	cv::Mat image_inRange;
 	inRange(image_hsv, cv::Scalar(23, 0, 0), cv::Scalar(180, 255, 255), image_inRange);
 	cv::bitwise_not(image_inRange, image_inRange);
@@ -129,10 +133,10 @@ bool lineDetect::detectLine() {
 	contour_ = contours[imax];
 
 	//std::cout << "contour size in line detect: " << contour_.size() << std::endl;
-	drawContours(raw_image_, contours, imax, cv::Scalar(0, 0, 255), 3);
-	cv::imshow("contour", raw_image_);
+	//drawContours(raw_image_, contours, imax, cv::Scalar(0, 0, 255), 3);
+	//cv::imshow("contour", raw_image_);
 	//cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\contour.png", raw_image_);
-	cv::waitKey(1);
+	//cv::waitKey(1);
 	return true;
 }
 

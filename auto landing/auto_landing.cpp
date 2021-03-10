@@ -266,6 +266,7 @@ int autoLanding::test() {
 
 //	pXplaneUDPClient_->subscribeDataRef("sim/aircraft/view/acf_descrip[0][40]", 1);
 //	pXplaneUDPClient_->subscribeDataRef("sim/cockpit/autopilot/current_altitude[0]", 10);
+//	pXplaneUDPClient_->subscribeDataRef("sim/graphics/view/projection_matrix[1]", 10);
 
 //	pXplaneUDPClient_->sendCommand("sim/autopilot/heading");
 //	pXplaneUDPClient_->sendCommand("sim/flight_controls/flaps_down");
@@ -274,7 +275,7 @@ int autoLanding::test() {
 //	pXplaneUDPClient_->sendCommand("sim/flight_controls/brakes_toggle_max"); //brake
 
 //	pXplaneUDPClient_->setDataRef("sim/multiplayer/controls/engine_throttle_request[0]", 1.0);
-	pimageProcess_->detect();
+//	pimageProcess_->saveVideo();
 //	pimageProcess_->collectData();
 //	writeData();
 
@@ -332,6 +333,22 @@ void readTextfile(std::string filename, double& heading) {
 	}
 	in_stream.close();
 }
+int autoLanding::test_ipm() {
+	cv::Mat frame = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_1.png", CV_LOAD_IMAGE_GRAYSCALE);
+
+	std::thread tbirdView(&birdView::run, pbirdView_);
+	tbirdView.detach();
+
+	std::thread tdigitalRecg(&digitalRecg::run, pdigitalRecg_);
+	tdigitalRecg.detach();
+	pbirdView_->requestStart(frame);
+
+	while (!pbirdView_->isStopped()) {
+		;
+	}
+
+	return 0;
+}
 int autoLanding::test_visual() {
 
 	cv::VideoCapture capture("E:\\Games\\X-Plane 11 Global Scenery\\Output\\test.avi");
@@ -360,11 +377,11 @@ int autoLanding::test_visual() {
 	std::thread tlineDetect(&lineDetect::run, plineDetect_);
 	tlineDetect.detach();
 
-	/*std::thread tCPSocket(&CPSocket::run, pCPSocket_);
-	tCPSocket.detach();
+	//std::thread tCPSocket(&CPSocket::run, pCPSocket_);
+	//tCPSocket.detach();
 
 	//等待连接成功
-	while (!pCPSocket_->isConnected()) {
+	/*while (!pCPSocket_->isConnected()) {
 		;
 	}*/
 
@@ -388,7 +405,7 @@ int autoLanding::test_visual() {
 
 		//之前这个顺序写反了 导致birdview线程开始处理 但是contour还没有来得及传入//
 		pbirdView_->setContour(plineDetect_->getContour());
-		pbirdView_->setPosition(pdigitalRecg_->getHeading(), pdigitalRecg_->getPitch(), pdigitalRecg_->getRoll(), pdigitalRecg_->getX(), pdigitalRecg_->getY(), pdigitalRecg_->getZ());
+		//pbirdView_->setPosition(pdigitalRecg_->getHeading(), pdigitalRecg_->getPitch(), pdigitalRecg_->getRoll(), pdigitalRecg_->getX(), pdigitalRecg_->getY(), pdigitalRecg_->getZ());
 		pbirdView_->requestStart(frame);
 
 		while (!pbirdView_->isStopped()) {
@@ -399,9 +416,9 @@ int autoLanding::test_visual() {
 		readTextfile("E:\\project\\auto landing\\auto landing\\auto landing\\image\\data.txt", predictHeading);
 
 		pvisualize_->setRawImage(frame);
-		pvisualize_->setBirdImage(pbirdView_->getBirdView());
-		//pvisualize_->setLineImage(plineDetect_->getDetectLine());
-		//pvisualize_->setHeading(predictHeading, pdigitalRecg_->getHeading(), currentFrame);
+		pvisualize_->setBirdImage(pbirdView_->getPerspective());
+		pvisualize_->setLineImage(plineDetect_->getDetectLine());
+		pvisualize_->setHeading(predictHeading, pdigitalRecg_->getHeading(), currentFrame);
 
 		std::cout << "currentFrame: " << currentFrame << " " << pdigitalRecg_->getHeading() << " " << pdigitalRecg_->getPitch() << " " << pdigitalRecg_->getRoll();
 		std::cout << " " << pdigitalRecg_->getX() << " " << pdigitalRecg_->getY() << " " << pdigitalRecg_->getZ() << std::endl;

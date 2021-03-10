@@ -53,7 +53,7 @@ namespace autolanding_lmz {
 
 		//抓取到的数据
 		double heading_, pitch_, roll_, local_x_, local_y_, local_z_;
-		int index = 38;
+		int index = 0;
 	};
 }
 

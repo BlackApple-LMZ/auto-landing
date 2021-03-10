@@ -26,6 +26,7 @@ namespace autolanding_lmz {
 		void detect();
 		bool adjustDirection(double &angle_left, double &angle_right);
 		void collectData();
+		void saveVideo();
 
     private:
 		bool dataCompute(std::string name, double &angle_left, double &angle_right);
@@ -44,7 +45,7 @@ namespace autolanding_lmz {
 		void lineSeparation(std::vector<cv::Vec4i> lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines, double &left_angle, double &right_angle, const cv::Mat& image, double slope_thresh, bool bfirst);
 		std::string file_name_;
 		int curr_index_;
-		int start_index_ = 520;
+		int start_index_ = 1;
 
 		cv::Mat raw_image_;
 		cv::Mat image_road_result_; //final road image

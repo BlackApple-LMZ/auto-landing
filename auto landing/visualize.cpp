@@ -43,6 +43,7 @@ namespace autolanding_lmz {
 		predictHeading_ = predictHeading;
 		realHeading_ = realHeading;
 		index_ = index;
+		std::cout << realHeading_ << std::endl;
 	}
 	bool visualize::show(int index){
 		cv::Mat raw_image = cv::imread(pre_name_ + std::to_string(index) + ".png");
@@ -146,7 +147,7 @@ namespace autolanding_lmz {
 		cv::Mat showWindowImages(imageHeight, imageWidth, CV_8UC3, cv::Scalar::all(0));
 
 		//show line image
-		//drawLineImage(line_image_, 390);
+		drawLineImage(line_image_, 390);
 
 		//show raw image
 		cv::Mat tempRawImage = showWindowImages(cv::Rect(0, 0, 1280, 720));
@@ -162,6 +163,7 @@ namespace autolanding_lmz {
 		resize(heading_image_, tempHeadingImage, cv::Size(600, 360));
 
 		cv::imshow("show", showWindowImages);
+		//cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\show\\image" + std::to_string(index_) + ".png", showWindowImages);
 		cv::waitKey(0);
 
 		return true;
