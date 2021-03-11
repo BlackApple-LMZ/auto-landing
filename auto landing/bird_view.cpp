@@ -163,6 +163,7 @@ void birdView::setPosition(double heading, double pitch, double roll, double x, 
 	}
 	else if (index_ > 2) {
 		Toc_ = T_origin_inv_ * T_cur_;
+
 		//cv::Mat image = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_40.png");
 		//cv::Mat perspective, M = toCvMat(Toc_);
 		std::cout << "relative position in setPosition: "<<Toc_(0, 3)<<" "<< Toc_(1, 3) << " " << Toc_(2, 3) << std::endl;
@@ -258,6 +259,9 @@ void birdView::computeDisplay() {
 	cv::line(birdView_image_, cv::Point(300, 280), cv::Point(300, 360), cv::Scalar(255, 255, 255), 15, cv::LINE_AA);
 
 	int x = 300 + 20 * Toc_(2, 3);
+	if (x > 600) {
+		std::cout << Toc_(2, 3) << " " << x << std::endl;
+	}
 	cv::circle(birdView_image_, cv::Point(x, 180), 2, cv::Scalar(0, 0, 255), 2, 8);
 	cv::line(birdView_image_, cv::Point(x, 180), cv::Point(300, 180), cv::Scalar(0, 0, 255), 3, cv::LINE_AA);
 
@@ -265,9 +269,9 @@ void birdView::computeDisplay() {
 	putText(birdView_image_, text1, cv::Point(x, 200), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 0, 255), 1, 5);
 
 	//»­¼ýÍ·//
-	int end_x = x + 90 * sin(gamma_ - gamma0_);
+	int end_x = 300 + 90 * sin(gamma_ - gamma0_);
 	int end_y = 180 - 90 * cos(gamma_ - gamma0_);
-	arrowedLine(birdView_image_, cv::Point(x, 180), cv::Point(end_x, end_y), cv::Scalar(0, 255, 255), 3, 8, 0, 0.1);
+	arrowedLine(birdView_image_, cv::Point(300, 180), cv::Point(end_x, end_y), cv::Scalar(0, 0, 255), 3, 8, 0, 0.1);
 
 	//¼ÓÔØ·É»úÍ¼Æ¬//
 	//cv::Mat imageROI = birdView_image_(cv::Rect(x-20, 160, 40, 40));

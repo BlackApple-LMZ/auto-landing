@@ -172,6 +172,10 @@ namespace autolanding_lmz {
 				//如果检测出负号 但是这一位数字不是第一位 说明检测出错了
 				if (i == 11 && index != 0)
 					continue;
+
+				//如果检测出空格或者小数点 但是这一位数字是第一位 说明可能是将负号错检成了这些
+				if ((i == 10 || i == 12) && index == 0)
+					i = 11;
 				min = get_pxsum(result_img);
 				result_num = i;
 			}

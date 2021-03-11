@@ -334,19 +334,20 @@ void readTextfile(std::string filename, double& heading) {
 	in_stream.close();
 }
 int autoLanding::test_ipm() {
-	cv::Mat frame = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_1.png", CV_LOAD_IMAGE_GRAYSCALE);
-
-	std::thread tbirdView(&birdView::run, pbirdView_);
-	tbirdView.detach();
+	cv::Mat frame = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\aaaaaaaa.png");
+	//cv::Mat frame = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\aaaaaaaa.png", CV_LOAD_IMAGE_GRAYSCALE);
+	//std::thread tbirdView(&birdView::run, pbirdView_);
+	//tbirdView.detach();
 
 	std::thread tdigitalRecg(&digitalRecg::run, pdigitalRecg_);
 	tdigitalRecg.detach();
-	pbirdView_->requestStart(frame);
+	//pbirdView_->requestStart(frame);
 
-	while (!pbirdView_->isStopped()) {
+	pdigitalRecg_->requestStart(frame);
+	while (!pdigitalRecg_->isStopped()) {
 		;
 	}
-
+	std::cout << pdigitalRecg_->getX() << " " << pdigitalRecg_->getY() << " " << pdigitalRecg_->getZ() << std::endl;
 	return 0;
 }
 int autoLanding::test_visual() {
