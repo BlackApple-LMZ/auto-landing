@@ -37,6 +37,11 @@ birdView::birdView()
 		0.0, 0.0, 1.000, 0.0,
 		0.0, 0.0, 0.0, 1.000;
 
+	Toc_ << 1.000, 0.0, 0.0, 0.0,
+		0.0, 1.000, 0.0, 0.0,
+		0.0, 0.0, 1.000, 0.0,
+		0.0, 0.0, 0.0, 1.000;
+
 	M_per_ << -0.163069544364509, -1.660353349973082, 735.3956834532377, 0.0,
 	-5.456968210637569e-16, -1.761855821465277, 690.647482014389, 0.0,
 	-8.818629946085279e-19, -0.00262810160035237, 1.0, 0.0,
@@ -44,6 +49,7 @@ birdView::birdView()
 
 	M_ = toCvMat(M_per_);
 
+	airplane_image_ = cv::imread("E:\\project\\auto landing\\auto landing\\auto landing\\image\\airplane.jpg");
 //	M_.at<float>(0, 0) = ;
 }
 birdView::~birdView()
@@ -127,13 +133,12 @@ cv::Mat birdView::toCvMat(const Eigen::Matrix4d &m)
 	return cvMat.clone();
 }
 void birdView::setPosition(double heading, double pitch, double roll, double x, double y, double z) {
-	double scale = 3.1415926 / 180;
 
 	gamma_ = (heading - 11.22) * DEG2RAD;
 	theta_ = pitch * DEG2RAD;
 
 	//初始化欧拉角(Z-Y-X) 11.22是手动加的修正
-	Eigen::Vector3d ea(pitch*scale, (heading-11.22)*scale, roll*scale);
+	Eigen::Vector3d ea(pitch*DEG2RAD, (heading-11.22)*DEG2RAD, roll*DEG2RAD);
 
 	Eigen::Matrix3d rotation_matrix;
 	rotation_matrix = Eigen::AngleAxisd(ea[0], Eigen::Vector3d::UnitZ()) *
@@ -147,23 +152,24 @@ void birdView::setPosition(double heading, double pitch, double roll, double x, 
 	T_cur_.block<3, 3>(0, 0) = rotation_matrix;
 	T_cur_.topRightCorner<3, 1>() = tr;
 
-	if (++index_ == 1) {
+	if (++index_ == 2) {
 		//将第三帧的位姿设置为初始位姿 录视频的时候前几帧会是其他状态//
 		T_origin_.setIdentity();
 		T_origin_.block<3, 3>(0, 0) = rotation_matrix;
 		T_origin_.topRightCorner<3, 1>() = tr;
 
 		T_origin_inv_ = T_origin_.inverse();
+		gamma0_ = gamma_;
 	}
-	else if (index_ > 1) {
+	else if (index_ > 2) {
 		Toc_ = T_origin_inv_ * T_cur_;
-		cv::Mat image = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_40.png");
-		cv::Mat perspective, M = toCvMat(Toc_);
+		//cv::Mat image = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_40.png");
+		//cv::Mat perspective, M = toCvMat(Toc_);
 		std::cout << "relative position in setPosition: "<<Toc_(0, 3)<<" "<< Toc_(1, 3) << " " << Toc_(2, 3) << std::endl;
 		//std::cout << M << std::endl;
 
-		cv::warpPerspective(image, perspective, M, cv::Size(image.cols, image.rows), cv::INTER_LINEAR);
-		cv::imshow("perspective", perspective);
+		//cv::warpPerspective(image, perspective, M, cv::Size(image.cols, image.rows), cv::INTER_LINEAR);
+		//cv::imshow("perspective", perspective);
 	}
 
 	//std::cout << T_cur_ << std::endl;
@@ -178,7 +184,7 @@ void birdView::run(){
 		while (!startRequested_) {
 			;
 		}
-		computeBirdview();
+		computeDisplay();
 
 		setFinish();
 
@@ -239,84 +245,34 @@ void birdView::computeBirdview() {
 	//cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\perspective.png", perspective);
 	//cv::waitKey(0);
 }
-void birdView::build_ipm_table(const int srcw, const int srch, const int dstw, const int dsth, int* maptable)
-{
-	const float alpha_h = 0.5f * FOV_H_ * DEG2RAD;
-	const float alpha_v = 0.5f * FOV_V_ * DEG2RAD;
+void birdView::computeDisplay() {
+	birdView_image_ = cv::Mat(360, 600, CV_8UC3, cv::Scalar(128, 128, 128));
 
-	const int front_map_start_position = dsth >> 1; //100
-	const int front_map_end_position = front_map_start_position + dsth; //300 是啥意思？？？
-	const int side_map_mid_position = dstw >> 1; //100
-	//scale to get better mapped image
-	const int front_map_scale_factor = 4; //scale就是类似尺度 就是让投影后的内容更好的放到map里面
-	const int side_map_scale_factor = 2;
+	//跑道边界线//
+	cv::line(birdView_image_, cv::Point(120, 0), cv::Point(120, 360), cv::Scalar(255, 255, 255), 5, cv::LINE_AA);
+	cv::line(birdView_image_, cv::Point(480, 0), cv::Point(480, 360), cv::Scalar(255, 255, 255), 5, cv::LINE_AA);
 
-	for (int y = 0; y < dstw; ++y)
-	{
-		for (int x = front_map_start_position; x < front_map_end_position; ++x)
-		{
-			int idx = y * dsth + (x - front_map_start_position);
+	//跑道中线//
+	cv::line(birdView_image_, cv::Point(300, 0), cv::Point(300, 80), cv::Scalar(255, 255, 255), 15, cv::LINE_AA);
+	cv::line(birdView_image_, cv::Point(300, 140), cv::Point(300, 220), cv::Scalar(255, 255, 255), 15, cv::LINE_AA);
+	cv::line(birdView_image_, cv::Point(300, 280), cv::Point(300, 360), cv::Scalar(255, 255, 255), 15, cv::LINE_AA);
 
-			int deltax = front_map_scale_factor * (front_map_end_position - x - dx_);
-			int deltay = side_map_scale_factor * (y - side_map_mid_position - dz_);
+	int x = 300 + 20 * Toc_(2, 3);
+	cv::circle(birdView_image_, cv::Point(x, 180), 2, cv::Scalar(0, 0, 255), 2, 8);
+	cv::line(birdView_image_, cv::Point(x, 180), cv::Point(300, 180), cv::Scalar(0, 0, 255), 3, cv::LINE_AA);
 
-			if (deltay == 0)
-			{
-				maptable[idx] = maptable[idx - dsth];
-			}
-			else
-			{
-				int u = (int)((atan(dy_ * sin(atan((float)deltay / deltax)) / deltay) - (theta_ - alpha_v)) / (2 * alpha_v / srch));
-				int v = (int)((atan((float)deltay / deltax) - (gamma_ - alpha_h)) / (2 * alpha_h / srcw));
-				
-				if (u >= 0 && u < srch && v >= 0 && v < srcw)
-				{
-					maptable[idx] = srcw * u + v;
-					//std::cout << u << " " << v << " " << maptable[idx] << " " << idx << std::endl;
-				}
-				else
-				{
-					maptable[idx] = -1;
-				}
-			}
-		}
-	}
+	std::string text1 = "offset: " + std::to_string(Toc_(2, 3)) + "m";
+	putText(birdView_image_, text1, cv::Point(x, 200), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 0, 255), 1, 5);
+
+	//画箭头//
+	int end_x = x + 90 * sin(gamma_ - gamma0_);
+	int end_y = 180 - 90 * cos(gamma_ - gamma0_);
+	arrowedLine(birdView_image_, cv::Point(x, 180), cv::Point(end_x, end_y), cv::Scalar(0, 255, 255), 3, 8, 0, 0.1);
+
+	//加载飞机图片//
+	//cv::Mat imageROI = birdView_image_(cv::Rect(x-20, 160, 40, 40));
+	//resize(airplane_image_, imageROI, cv::Size(40, 40));
 }
-void birdView::inverse_perspective_mapping(const int dstw, const int dsth, const unsigned char* src, const int* maptable, unsigned char* dst)
-{
-	const float alpha_h = 0.5f * FOV_H_ * DEG2RAD;
-	const float alpha_v = 0.5f * FOV_V_ * DEG2RAD;
-
-	const int front_map_start_position = dsth >> 1; //100
-	const int front_map_end_position = front_map_start_position + dsth; //300 是啥意思？？？
-	const int side_map_mid_position = dstw >> 1; //100
-	//scale to get better mapped image
-	const int front_map_scale_factor = 4; //scale就是类似尺度 就是让投影后的内容更好的放到map里面
-	const int side_map_scale_factor = 2;
-
-	// dst image (1cm/pixel) 确定一下尺度比例
-	int idx = 0;
-
-	for (int j = 0; j < dsth; ++j)
-	{
-		for (int i = 0; i < dstw; ++i)
-		{
-
-
-			if (maptable[idx] != -1)
-			{
-				std::cout << src[maptable[idx]] << " " << maptable[idx] << " " << idx << std::endl;
-				dst[j * dstw + i] = src[maptable[idx]];
-			}
-			else
-			{
-				dst[j * dstw + i] = 0;
-			}
-			++idx;
-		}
-	}
-}
-
 void birdView::fieldView() {
 	//cv::Mat gray_image, perspective_image(gray_image.rows, gray_image.cols, CV_8UC1, 0);
 	
@@ -369,6 +325,8 @@ void birdView::fieldView() {
 
 	cv::imshow("resize", imresize);
 	cv::imshow("remap", imremapped);
+	//cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\point.png", imresize);
+	//6cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\perspective.png", imremapped);
 	cv::waitKey(0);
 
 }

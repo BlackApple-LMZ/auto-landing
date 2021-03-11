@@ -164,7 +164,7 @@ namespace autolanding_lmz {
 
 		cv::imshow("show", showWindowImages);
 		//cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\show\\image" + std::to_string(index_) + ".png", showWindowImages);
-		cv::waitKey(0);
+		cv::waitKey(1);
 
 		return true;
 	}

@@ -30,7 +30,7 @@ namespace autolanding_lmz {
 	}
 	void digitalRecg::requestStart(const cv::Mat& image)
 	{
-		
+		/*
 		//ת�ɻҶ�ͼ
 		if(++index < 3)
 			//raw_image_ = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_40.png", CV_LOAD_IMAGE_GRAYSCALE);
@@ -38,8 +38,8 @@ namespace autolanding_lmz {
 		else
 			raw_image_ = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_40.png", CV_LOAD_IMAGE_GRAYSCALE);
 			//raw_image_ = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\111\\Cessna_172SP_" + std::to_string(++index) + ".png", CV_LOAD_IMAGE_GRAYSCALE);
-		
-		//cv::cvtColor(image, raw_image_, CV_BGR2GRAY);
+		*/
+		cv::cvtColor(image, raw_image_, CV_BGR2GRAY);
 		std::unique_lock<std::mutex> lock(mutexRequestStart_);
 		startRequested_ = true;
 		std::unique_lock<std::mutex> lock2(mutexStop_);

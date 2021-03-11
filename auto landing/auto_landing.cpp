@@ -403,9 +403,7 @@ int autoLanding::test_visual() {
 			;
 		}
 
-		//之前这个顺序写反了 导致birdview线程开始处理 但是contour还没有来得及传入//
-		pbirdView_->setContour(plineDetect_->getContour());
-		//pbirdView_->setPosition(pdigitalRecg_->getHeading(), pdigitalRecg_->getPitch(), pdigitalRecg_->getRoll(), pdigitalRecg_->getX(), pdigitalRecg_->getY(), pdigitalRecg_->getZ());
+		pbirdView_->setPosition(pdigitalRecg_->getHeading(), pdigitalRecg_->getPitch(), pdigitalRecg_->getRoll(), pdigitalRecg_->getX(), pdigitalRecg_->getY(), pdigitalRecg_->getZ());
 		pbirdView_->requestStart(frame);
 
 		while (!pbirdView_->isStopped()) {
@@ -416,7 +414,7 @@ int autoLanding::test_visual() {
 		readTextfile("E:\\project\\auto landing\\auto landing\\auto landing\\image\\data.txt", predictHeading);
 
 		pvisualize_->setRawImage(frame);
-		pvisualize_->setBirdImage(pbirdView_->getPerspective());
+		pvisualize_->setBirdImage(pbirdView_->getBirdView());
 		pvisualize_->setLineImage(plineDetect_->getDetectLine());
 		pvisualize_->setHeading(predictHeading, pdigitalRecg_->getHeading(), currentFrame);
 

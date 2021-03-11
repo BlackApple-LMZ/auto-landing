@@ -42,17 +42,16 @@ namespace autolanding_lmz {
 		void computeBirdview();
 		//采用补偿手动投影的方式进行反变换//
 		void fieldView();
-		//构建ipm表 后面计算就只需要查表就ok
-		void build_ipm_table(const int srcw, const int srch, const int dstw, const int dsth, int* maptable);
+		//显示俯视图 飞机偏离中线的距离和航向角偏差//
+		void computeDisplay();
 
-		void inverse_perspective_mapping(const int dstw, const int dsth, const unsigned char* src, const int* maptable, unsigned char* dst);
 		//eigen to cv mat
 		cv::Mat toCvMat(const Eigen::Matrix4d &m);
 
 		std::mutex mutexStop_, mutexRequestStart_;
 		bool startRequested_{ false }, stopped_{ false };
 
-		cv::Mat birdView_image_;
+		cv::Mat birdView_image_, airplane_image_;
 		cv::Mat raw_image_;
 		std::vector<cv::Point> contour_;
 
@@ -70,7 +69,7 @@ namespace autolanding_lmz {
 		double FOV_H_ = 80.0f, FOV_V_ = 60.0f;//deg alpha
 		//x方向是向前 z是向右 y是向上 右手坐标系//
 		double dx_ = 0.0, dy_ = 1.8, dz_ = 0.0; //position of camera in world 
-		double gamma_ = 0.0, theta_ = 0.0; //heading pitch
+		double gamma0_ = 0.0, gamma_ = 0.0, theta_ = 0.0; //heading pitch
 		double m_ = 720, n_ = 1280; //height width
 
 		cv::Mat M_;
