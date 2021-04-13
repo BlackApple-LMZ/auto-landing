@@ -671,14 +671,14 @@ void imageProcess::saveVideo() {
 
 	//获取帧率
 	double rate = 10;
-	long currentFrame = 0;
+	long currentFrame = 1;
 
 	//save video
 	cv::Size size = cv::Size(1880, 720);//size一定要和frame尺寸匹配
 	cv::VideoWriter Writer("E:\\ProgramData\\heading dataset\\Cessna_172SP.avi", CV_FOURCC('M', 'J', 'P', 'G'), rate, size, true);
 
-	while (currentFrame < 851) {
-		cv::Mat frame = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\show\\image" + std::to_string(currentFrame) + ".png");
+	while (currentFrame < 1040) {
+		cv::Mat frame = cv::imread("E:\\Games\\X-Plane 11 Global Scenery\\Output\\show2\\image" + std::to_string(currentFrame) + ".png");
 		Writer.write(frame);
 
 		currentFrame++;

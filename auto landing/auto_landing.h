@@ -34,6 +34,7 @@ namespace autolanding_lmz{
 		//测试ipm鸟瞰图的算法//
 		int test_ipm();
 		int test();
+		int test_save();
 		/*
 		 从xplane采集图像和航向角数据：调整飞机位置和航向角然后截图
 		 位置通过udp可以调整，但是航向角没有找到可以调整的指令 就手动调角度。。。

@@ -12,6 +12,7 @@
 #include <functional>
 
 #include "XPUtils.h"
+#include "uff_model_heading.h"
 
 #define WIN_32
 
@@ -275,7 +276,7 @@ int autoLanding::test() {
 //	pXplaneUDPClient_->sendCommand("sim/flight_controls/brakes_toggle_max"); //brake
 
 //	pXplaneUDPClient_->setDataRef("sim/multiplayer/controls/engine_throttle_request[0]", 1.0);
-//	pimageProcess_->saveVideo();
+	pimageProcess_->saveVideo();
 //	pimageProcess_->collectData();
 //	writeData();
 
@@ -350,7 +351,43 @@ int autoLanding::test_ipm() {
 	std::cout << pdigitalRecg_->getX() << " " << pdigitalRecg_->getY() << " " << pdigitalRecg_->getZ() << std::endl;
 	return 0;
 }
+int autoLanding::test_save() {
+	cv::VideoCapture capture("E:\\Games\\X-Plane 11 Global Scenery\\Output\\test.avi");
+	if (!capture.isOpened())
+		std::cout << "fail to open!" << std::endl;
+
+	long totalFrameNumber = capture.get(CV_CAP_PROP_FRAME_COUNT);
+
+	int currentFrame{ 0 };
+	capture.set(CV_CAP_PROP_POS_FRAMES, currentFrame);
+	cv::Mat frame;
+
+	while (currentFrame < totalFrameNumber) {
+		if (!capture.read(frame)) {
+			std::cout << "读取视频失败" << std::endl;
+			break;
+		}
+		cv::imwrite("E:\\project\\auto landing\\auto landing\\auto landing\\image\\image" + std::to_string(currentFrame) + ".png", frame);
+		currentFrame++;
+		std::cout << currentFrame << std::endl;
+	}
+	return 0;
+}
+
 int autoLanding::test_visual() {
+	string paramFile = "E:\\project\\tensorRT_test\\tensorRT_test\\config\\param.yaml";
+
+	uffModelBase * pModel = new uffModel;
+	gLogInfo << "Building and running a GPU inference engine for Uff MNIST" << std::endl;
+
+	if (!pModel->initParams(paramFile))
+	{
+		return -1;
+	}
+	if (!pModel->build())
+	{
+		return -1;
+	}
 
 	cv::VideoCapture capture("E:\\Games\\X-Plane 11 Global Scenery\\Output\\test.avi");
 	if (!capture.isOpened())
@@ -358,7 +395,7 @@ int autoLanding::test_visual() {
 
 	long totalFrameNumber = capture.get(CV_CAP_PROP_FRAME_COUNT);
 
-	int frameToStart{0}, frameToStop = totalFrameNumber;
+	int frameToStart{0};
 	capture.set(CV_CAP_PROP_POS_FRAMES, frameToStart);
 
 	bool stop = false, restart = true;
@@ -382,9 +419,9 @@ int autoLanding::test_visual() {
 	//tCPSocket.detach();
 
 	//等待连接成功
-	/*while (!pCPSocket_->isConnected()) {
-		;
-	}*/
+	//while (!pCPSocket_->isConnected()) {
+		//;
+	//}
 
 	while (currentFrame < totalFrameNumber) {
 		if (!capture.read(frame)) {
@@ -400,6 +437,7 @@ int autoLanding::test_visual() {
 		//pCPSocket_->requestStart();
 
 		//wait until BirdView Process has stopped
+		pModel->infer();
 		while (/*!pbirdView_->isStopped() || */!pdigitalRecg_->isStopped() || !plineDetect_->isStopped()){// || !pCPSocket_->isStopped()) {
 			;
 		}
@@ -424,6 +462,10 @@ int autoLanding::test_visual() {
 
 		pvisualize_->show();
 		++currentFrame;
+	}
+	if (!pModel->teardown())
+	{
+		return -1;
 	}
 
 	capture.release();

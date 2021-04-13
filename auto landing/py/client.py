@@ -23,8 +23,9 @@ def read_an_image(filename):
     elif FLAGS.model == '':
         image_mean = [175.365, 175.257, 163.012] #850
         #image_mean = [163.481, 163.017, 150.835] #486
-        img = img - image_mean
+        #img = img - image_mean
         img = cv2.resize(img[-480:], (200, 66))
+        
         #img = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
     return img
 
@@ -111,6 +112,7 @@ if __name__=='__main__':
                 f = open("..\image\data.txt", 'w+')
                 
                 batch_x = read_an_image("..\image\image.png")
+                print(batch_x)
                 batch_x = np.expand_dims(batch_x, 0)/255
                 #print(batch_x.shape)
                 #batch_y = 0.0;

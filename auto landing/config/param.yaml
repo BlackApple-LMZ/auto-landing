@@ -1,0 +1,27 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+
+#Model.modelname: "E:\\project\\tensorRT_test\\tensorRT_test\\model\\lenet5.uff"
+Model.modelname: "E:\\project\\auto landing\\auto landing\\auto landing\\model\\pbmodel.uff"
+
+DataDir.num: 1
+DataDir.dir1: "E:\\project\\auto landing\\auto landing\\auto landing\\image\\image.png"
+
+Input.num: 1
+#Input.tensorName1: "in"
+Input.tensorName1: "Placeholder_1"
+
+Output.num: 1
+#Output.tensorName1: "out"
+Output.tensorName1: "output/add"
+
+Params.batchSize: 1
+#Specify a DLA engine for layers that support Value can range from 0 to n-1, where n is the number of DLA engines on the platform.
+Params.dlaCore: -1
+# 1 for Run in Int8 mode 0 default
+Params.int8: 0
+# 1 for Run in fp16 mode 0 default
+Params.fp16: 0

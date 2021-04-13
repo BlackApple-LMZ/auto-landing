@@ -54,6 +54,21 @@
     <ClCompile Include="line_detect.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="test.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="common\logger.cpp">
+      <Filter>资源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="common\windows\getopt.c">
+      <Filter>资源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="model_base.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="uff_model_heading.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="auto_landing.h">
@@ -96,6 +111,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="line_detect.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="test.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="model_base.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="uff_model_heading.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

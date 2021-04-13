@@ -163,7 +163,7 @@ namespace autolanding_lmz {
 		resize(heading_image_, tempHeadingImage, cv::Size(600, 360));
 
 		cv::imshow("show", showWindowImages);
-		//cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\show\\image" + std::to_string(index_) + ".png", showWindowImages);
+		cv::imwrite("E:\\Games\\X-Plane 11 Global Scenery\\Output\\show2\\image" + std::to_string(index_) + ".png", showWindowImages);
 		cv::waitKey(1);
 
 		return true;
